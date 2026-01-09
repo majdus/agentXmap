@@ -78,7 +78,7 @@ func TestOrganizationRepository_GetByID(t *testing.T) {
 
 		// GORM adds deleted_at check and limit
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE id = $1 AND "organizations"."deleted_at" IS NULL`)).
-			WithArgs(id).
+			WithArgs(id, 1). // Added limit arg
 			WillReturnRows(rows)
 
 		org, err := repo.GetByID(context.Background(), id)
@@ -92,7 +92,7 @@ func TestOrganizationRepository_GetByID(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		id := uuid.New()
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE id = $1`)).
-			WithArgs(id).
+			WithArgs(id, 1). // Added limit arg
 			WillReturnError(gorm.ErrRecordNotFound)
 
 		org, err := repo.GetByID(context.Background(), id)
@@ -117,7 +117,7 @@ func TestOrganizationRepository_GetBySlug(t *testing.T) {
 			AddRow(uuid.New(), "Test Org", slug, time.Now(), time.Now())
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE slug = $1 AND "organizations"."deleted_at" IS NULL`)).
-			WithArgs(slug).
+			WithArgs(slug, 1). // Added limit arg
 			WillReturnRows(rows)
 
 		org, err := repo.GetBySlug(context.Background(), slug)
@@ -130,7 +130,7 @@ func TestOrganizationRepository_GetBySlug(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		slug := "non-existent"
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE slug = $1`)).
-			WithArgs(slug).
+			WithArgs(slug, 1). // Added limit arg
 			WillReturnError(gorm.ErrRecordNotFound)
 
 		org, err := repo.GetBySlug(context.Background(), slug)

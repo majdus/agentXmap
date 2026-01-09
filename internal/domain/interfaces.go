@@ -15,6 +15,13 @@ type UserRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
+// InvitationRepository defines access to Invitations.
+type InvitationRepository interface {
+	Create(ctx context.Context, invitation *Invitation) error
+	GetByToken(ctx context.Context, token string) (*Invitation, error)
+	Update(ctx context.Context, invitation *Invitation) error
+}
+
 // OrganizationRepository defines access to Organizations.
 type OrganizationRepository interface {
 	Create(ctx context.Context, org *Organization) error

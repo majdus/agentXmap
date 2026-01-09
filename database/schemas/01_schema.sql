@@ -32,6 +32,7 @@ CREATE TYPE agent_status AS ENUM ('active', 'inactive', 'maintenance', 'deprecat
 CREATE TYPE billing_cycle AS ENUM ('monthly', 'yearly', 'one_time', 'custom');
 CREATE TYPE access_level AS ENUM ('read_only', 'read_write');
 CREATE TYPE audit_action AS ENUM ('create', 'update', 'delete', 'login', 'export_data');
+CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'expired', 'revoked');
 
 -- ============================================================
 -- 2. CORE: IDENTITY & TENANCY
@@ -61,6 +62,20 @@ CREATE TABLE users (
 
 -- Trigger for users.updated_at
 CREATE TRIGGER update_users_modtime BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE invitations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    invitor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    role user_role NOT NULL DEFAULT 'user',
+    status invitation_status DEFAULT 'pending',
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+CREATE TRIGGER update_invitations_modtime BEFORE UPDATE ON invitations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================
 -- 3. AGENT DOMAIN

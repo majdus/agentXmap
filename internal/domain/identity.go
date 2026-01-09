@@ -16,6 +16,15 @@ const (
 	UserRoleUser    UserRole = "user"
 )
 
+type InvitationStatus string
+
+const (
+	InvitationStatusPending  InvitationStatus = "pending"
+	InvitationStatusAccepted InvitationStatus = "accepted"
+	InvitationStatusExpired  InvitationStatus = "expired"
+	InvitationStatusRevoked  InvitationStatus = "revoked"
+)
+
 // Organization represents a tenant or company using the platform.
 type Organization struct {
 	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
@@ -46,4 +55,22 @@ type User struct {
 
 	// Relations
 	Organization Organization `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+}
+
+// Invitation represents a pending or completed user invitation.
+type Invitation struct {
+	ID             uuid.UUID        `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	OrganizationID uuid.UUID        `gorm:"type:uuid;not null"`
+	InvitorID      uuid.UUID        `gorm:"type:uuid;not null"`
+	Email          string           `gorm:"type:varchar(255);not null"`
+	Token          string           `gorm:"type:varchar(255);not null;unique"`
+	Role           UserRole         `gorm:"type:user_role;default:'user';not null"`
+	Status         InvitationStatus `gorm:"type:invitation_status;default:'pending'"`
+	ExpiresAt      time.Time        `gorm:"not null"`
+	CreatedAt      time.Time        `gorm:"default:now()"`
+	UpdatedAt      time.Time        `gorm:"default:now()"`
+
+	// Relations
+	Organization Organization `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Invitor      User         `gorm:"foreignKey:InvitorID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
