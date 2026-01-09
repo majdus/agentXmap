@@ -33,3 +33,26 @@ func (r *llmRepository) GetModel(ctx context.Context, id uuid.UUID) (*domain.LLM
 	}
 	return &model, nil
 }
+
+func (r *llmRepository) ListModels(ctx context.Context, providerID uuid.UUID) ([]domain.LLMModel, error) {
+	var models []domain.LLMModel
+	query := r.db.WithContext(ctx)
+	if providerID != uuid.Nil {
+		query = query.Where("provider_id = ?", providerID)
+	}
+	if err := query.Find(&models).Error; err != nil {
+		return nil, err
+	}
+	return models, nil
+}
+
+func (r *llmRepository) ListAgentsUsingModel(ctx context.Context, modelID uuid.UUID) ([]domain.Agent, error) {
+	var agents []domain.Agent
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN agent_llms ON agent_llms.agent_id = agents.id").
+		Where("agent_llms.llm_model_id = ?", modelID).
+		Find(&agents).Error; err != nil {
+		return nil, err
+	}
+	return agents, nil
+}

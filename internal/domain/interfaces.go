@@ -45,12 +45,15 @@ type AgentRepository interface {
 
 	// Assignments
 	GetAssignedUsers(ctx context.Context, agentID uuid.UUID) ([]User, error)
+	GetAssignedLLMs(ctx context.Context, agentID uuid.UUID) ([]AgentLLM, error)
 }
 
 // LLMRepository defines interactions with LLM configurations.
 type LLMRepository interface {
 	ListProviders(ctx context.Context) ([]LLMProvider, error)
 	GetModel(ctx context.Context, id uuid.UUID) (*LLMModel, error)
+	ListModels(ctx context.Context, providerID uuid.UUID) ([]LLMModel, error)
+	ListAgentsUsingModel(ctx context.Context, modelID uuid.UUID) ([]Agent, error)
 }
 
 // AuditRepository for compliance logging.

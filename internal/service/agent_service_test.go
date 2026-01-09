@@ -70,6 +70,11 @@ func (m *MockAgentRepository) GetAssignedUsers(ctx context.Context, agentID uuid
 	return args.Get(0).([]domain.User), args.Error(1)
 }
 
+func (m *MockAgentRepository) GetAssignedLLMs(ctx context.Context, agentID uuid.UUID) ([]domain.AgentLLM, error) {
+	args := m.Called(ctx, agentID)
+	return args.Get(0).([]domain.AgentLLM), args.Error(1)
+}
+
 func TestAgentService_CreateAgent(t *testing.T) {
 	mockRepo := new(MockAgentRepository)
 	service := NewAgentService(mockRepo)
@@ -274,11 +279,31 @@ func TestAgentService_ListAssignedUsers(t *testing.T) {
 		mockRepo := new(MockAgentRepository)
 		service := NewAgentService(mockRepo)
 
-		mockRepo.On("GetAssignedUsers", ctx, agentID).Return(nil, errors.New("db error"))
+		mockRepo.On("GetAssignedUsers", ctx, agentID).Return([]domain.User{}, errors.New("db error"))
 
 		_, err := service.ListAssignedUsers(ctx, agentID)
 		assert.Error(t, err)
 		assert.Equal(t, "db error", err.Error())
+		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestAgentService_GetAgentLLMs(t *testing.T) {
+	ctx := context.Background()
+	agentID := uuid.New()
+
+	t.Run("Success", func(t *testing.T) {
+		mockRepo := new(MockAgentRepository)
+		service := NewAgentService(mockRepo)
+
+		expectedLLMs := []domain.AgentLLM{
+			{ID: uuid.New(), AgentID: agentID, LLMModel: domain.LLMModel{FamilyName: "GPT-4"}},
+		}
+		mockRepo.On("GetAssignedLLMs", ctx, agentID).Return(expectedLLMs, nil)
+
+		llms, err := service.GetAgentLLMs(ctx, agentID)
+		assert.NoError(t, err)
+		assert.Len(t, llms, 1)
 		mockRepo.AssertExpectations(t)
 	})
 }

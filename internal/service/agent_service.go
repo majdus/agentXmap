@@ -17,6 +17,7 @@ type AgentService interface {
 	ListAgents(ctx context.Context, orgID uuid.UUID) ([]domain.Agent, error)
 	ListAgentResources(ctx context.Context, agentID uuid.UUID) ([]domain.Resource, error)
 	ListAssignedUsers(ctx context.Context, agentID uuid.UUID) ([]domain.User, error)
+	GetAgentLLMs(ctx context.Context, agentID uuid.UUID) ([]domain.AgentLLM, error)
 	UpdateAgent(ctx context.Context, id, userID uuid.UUID, name string, config json.RawMessage, status domain.AgentStatus) (*domain.Agent, error)
 	DeleteAgent(ctx context.Context, id uuid.UUID) error
 }
@@ -92,6 +93,10 @@ func (s *DefaultAgentService) ListAgentResources(ctx context.Context, agentID uu
 
 func (s *DefaultAgentService) ListAssignedUsers(ctx context.Context, agentID uuid.UUID) ([]domain.User, error) {
 	return s.agentRepo.GetAssignedUsers(ctx, agentID)
+}
+
+func (s *DefaultAgentService) GetAgentLLMs(ctx context.Context, agentID uuid.UUID) ([]domain.AgentLLM, error) {
+	return s.agentRepo.GetAssignedLLMs(ctx, agentID)
 }
 
 func (s *DefaultAgentService) UpdateAgent(ctx context.Context, id, userID uuid.UUID, name string, config json.RawMessage, status domain.AgentStatus) (*domain.Agent, error) {

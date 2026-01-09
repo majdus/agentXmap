@@ -43,6 +43,18 @@ func (r *agentRepository) ListByOrg(ctx context.Context, orgID uuid.UUID) ([]dom
 	return agents, nil
 }
 
+func (r *agentRepository) GetAssignedLLMs(ctx context.Context, agentID uuid.UUID) ([]domain.AgentLLM, error) {
+	var agentLLMs []domain.AgentLLM
+	// Load AgentLLM with associated LLMModel details
+	if err := r.db.WithContext(ctx).
+		Preload("LLMModel").
+		Where("agent_id = ?", agentID).
+		Find(&agentLLMs).Error; err != nil {
+		return nil, err
+	}
+	return agentLLMs, nil
+}
+
 func (r *agentRepository) Update(ctx context.Context, agent *domain.Agent) error {
 	return r.db.WithContext(ctx).Save(agent).Error
 }
