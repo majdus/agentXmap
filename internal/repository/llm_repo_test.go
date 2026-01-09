@@ -45,6 +45,14 @@ func TestLLMRepository_ListProviders(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "Error",
+			mock: func() {
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "llm_providers"`)).
+					WillReturnError(assert.AnError)
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -106,7 +114,18 @@ func TestLLMRepository_GetModel(t *testing.T) {
 					WillReturnError(gorm.ErrRecordNotFound)
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
+		},
+		{
+			name: "DB Error",
+			id:   modelID,
+			mock: func() {
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "llm_models" WHERE id = $1`)).
+					WithArgs(modelID, 1).
+					WillReturnError(assert.AnError)
+			},
+			want:    nil,
+			wantErr: true,
 		},
 	}
 
@@ -114,11 +133,12 @@ func TestLLMRepository_GetModel(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mock()
 			_, err := repo.GetModel(ctx, tt.id)
-			if tt.name == "Not Found" {
+			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
+			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
 }

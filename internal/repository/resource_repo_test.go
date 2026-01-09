@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"testing"
 	"time"
@@ -61,6 +62,7 @@ func TestResourceRepository_GetByID(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
 }
@@ -77,13 +79,48 @@ func TestResourceRepository_Create(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	// GORM behavior: 7 args seen in error.
-	mock.ExpectBegin()
-	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "resources"`)).
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()). // 7 args
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(res.ID))
-	mock.ExpectCommit()
+	tests := []struct {
+		name    string
+		input   *domain.Resource
+		mock    func()
+		wantErr bool
+	}{
+		{
+			name:  "Success",
+			input: res,
+			mock: func() {
+				// GORM behavior: 7 args seen in error.
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "resources"`)).
+					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()). // 7 args
+					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(res.ID))
+				mock.ExpectCommit()
+			},
+			wantErr: false,
+		},
+		{
+			name:  "Error",
+			input: res,
+			mock: func() {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "resources"`)).
+					WillReturnError(errors.New("db error"))
+				mock.ExpectRollback()
+			},
+			wantErr: true,
+		},
+	}
 
-	err := repo.Create(ctx, res)
-	assert.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mock()
+			err := repo.Create(ctx, tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
 }

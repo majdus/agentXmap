@@ -142,7 +142,7 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 					WillReturnError(gorm.ErrRecordNotFound)
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 
@@ -161,7 +161,73 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 			} else {
 				assert.Nil(t, got)
 			}
-			// assert.NoError(t, mock.ExpectationsWereMet())
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestUserRepository_GetByID(t *testing.T) {
+	db, mock := setupMockDB(t)
+	repo := NewUserRepository(db)
+	ctx := context.TODO()
+
+	id := uuid.New()
+	orgID := uuid.New()
+
+	tests := []struct {
+		name    string
+		id      uuid.UUID
+		mock    func()
+		want    *domain.User
+		wantErr bool
+	}{
+		{
+			name: "Found",
+			id:   id,
+			mock: func() {
+				rows := sqlmock.NewRows([]string{"id", "email", "organization_id", "password_hash", "role", "created_at", "updated_at"}).
+					AddRow(id, "test@example.com", orgID, "hash", "user", time.Now(), time.Now())
+
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1`)).
+					WithArgs(id, 1).
+					WillReturnRows(rows)
+
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE "organizations"."id" = $1`)).
+					WithArgs(orgID).
+					WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(orgID, "Org"))
+			},
+			want:    &domain.User{ID: id, Email: "test@example.com"},
+			wantErr: false,
+		},
+		{
+			name: "Not Found",
+			id:   id,
+			mock: func() {
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1`)).
+					WithArgs(id, 1).
+					WillReturnError(gorm.ErrRecordNotFound)
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mock()
+			got, err := repo.GetByID(ctx, tt.id)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			if tt.want != nil {
+				assert.NotNil(t, got)
+				assert.Equal(t, tt.want.ID, got.ID)
+			} else {
+				assert.Nil(t, got)
+			}
+			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
 }

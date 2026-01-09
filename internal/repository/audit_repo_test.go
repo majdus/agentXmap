@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"testing"
 	"time"
@@ -25,17 +26,49 @@ func TestAuditRepository_CreateLog(t *testing.T) {
 		OccurredAt:     time.Now(),
 	}
 
-	// GORM behavior: 8 arguments seen in error.
-	// We previously expected 9.
-	// We will match 8 args now.
-	mock.ExpectBegin()
-	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "system_audit_logs"`)).
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()). // 8 args
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(log.ID))
-	mock.ExpectCommit()
+	tests := []struct {
+		name    string
+		input   *domain.SystemAuditLog
+		mock    func()
+		wantErr bool
+	}{
+		{
+			name:  "Success",
+			input: log,
+			mock: func() {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "system_audit_logs"`)).
+					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()). // 8 args
+					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(log.ID))
+				mock.ExpectCommit()
+			},
+			wantErr: false,
+		},
+		{
+			name:  "Error",
+			input: log,
+			mock: func() {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "system_audit_logs"`)).
+					WillReturnError(errors.New("db error"))
+				mock.ExpectRollback()
+			},
+			wantErr: true,
+		},
+	}
 
-	err := repo.CreateLog(ctx, log)
-	assert.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mock()
+			err := repo.CreateLog(ctx, tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
 }
 
 func TestAuditRepository_CreateExecution(t *testing.T) {
@@ -49,12 +82,47 @@ func TestAuditRepository_CreateExecution(t *testing.T) {
 		AgentID:   uuid.New(),
 	}
 
-	mock.ExpectBegin()
-	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "agent_executions"`)).
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(exec.ID))
-	mock.ExpectCommit()
+	tests := []struct {
+		name    string
+		input   *domain.AgentExecution
+		mock    func()
+		wantErr bool
+	}{
+		{
+			name:  "Success",
+			input: exec,
+			mock: func() {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "agent_executions"`)).
+					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(exec.ID))
+				mock.ExpectCommit()
+			},
+			wantErr: false,
+		},
+		{
+			name:  "Error",
+			input: exec,
+			mock: func() {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "agent_executions"`)).
+					WillReturnError(errors.New("db error"))
+				mock.ExpectRollback()
+			},
+			wantErr: true,
+		},
+	}
 
-	err := repo.CreateExecution(ctx, exec)
-	assert.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mock()
+			err := repo.CreateExecution(ctx, tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
 }

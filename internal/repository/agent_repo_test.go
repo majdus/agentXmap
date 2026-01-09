@@ -151,3 +151,49 @@ func TestAgentRepository_GetByID(t *testing.T) {
 		})
 	}
 }
+
+func TestAgentRepository_ListByOrg(t *testing.T) {
+	db, mock := setupMockDB(t)
+	repo := NewAgentRepository(db)
+	ctx := context.TODO()
+
+	orgID := uuid.New()
+
+	tests := []struct {
+		name    string
+		orgID   uuid.UUID
+		mock    func()
+		wantLen int
+		wantErr bool
+	}{
+		{
+			name:  "Success",
+			orgID: orgID,
+			mock: func() {
+				rows := sqlmock.NewRows([]string{"id", "name", "organization_id", "status"}).
+					AddRow(uuid.New(), "Agent 1", orgID, "active").
+					AddRow(uuid.New(), "Agent 2", orgID, "inactive")
+
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "agents" WHERE organization_id = $1`)).
+					WithArgs(orgID).
+					WillReturnRows(rows)
+			},
+			wantLen: 2,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mock()
+			got, err := repo.ListByOrg(ctx, tt.orgID)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Len(t, got, tt.wantLen)
+			}
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}

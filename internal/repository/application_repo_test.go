@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"testing"
 	"time"
@@ -85,12 +86,47 @@ func TestApplicationRepository_Create(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	mock.ExpectBegin()
-	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "applications"`)).
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(app.ID))
-	mock.ExpectCommit()
+	tests := []struct {
+		name    string
+		input   *domain.Application
+		mock    func()
+		wantErr bool
+	}{
+		{
+			name:  "Success",
+			input: app,
+			mock: func() {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "applications"`)).
+					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(app.ID))
+				mock.ExpectCommit()
+			},
+			wantErr: false,
+		},
+		{
+			name:  "Error",
+			input: app,
+			mock: func() {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "applications"`)).
+					WillReturnError(errors.New("db error"))
+				mock.ExpectRollback()
+			},
+			wantErr: true,
+		},
+	}
 
-	err := repo.Create(ctx, app)
-	assert.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mock()
+			err := repo.Create(ctx, tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
 }
