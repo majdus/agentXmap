@@ -39,6 +39,12 @@ type AgentRepository interface {
 
 	// Versioning
 	CreateVersion(ctx context.Context, version *AgentVersion) error
+
+	// Resources
+	GetResources(ctx context.Context, agentID uuid.UUID) ([]Resource, error)
+
+	// Assignments
+	GetAssignedUsers(ctx context.Context, agentID uuid.UUID) ([]User, error)
 }
 
 // LLMRepository defines interactions with LLM configurations.
