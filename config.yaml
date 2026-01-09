@@ -1,0 +1,11 @@
+server:
+  port: "8080"
+  mode: "debug" # release in production
+
+app:
+  name: "agentXmap"
+  version: "1.0.0"
+
+logger:
+  level: "debug" # debug, info, warn, error
+  encoding: "json" # json, console
