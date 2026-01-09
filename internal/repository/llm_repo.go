@@ -56,3 +56,15 @@ func (r *llmRepository) ListAgentsUsingModel(ctx context.Context, modelID uuid.U
 	}
 	return agents, nil
 }
+
+func (r *llmRepository) GetCertifications(ctx context.Context, modelID uuid.UUID) ([]domain.Certification, error) {
+	var certifications []domain.Certification
+	err := r.db.WithContext(ctx).
+		Joins("JOIN llm_model_certifications ON llm_model_certifications.certification_id = certifications.id").
+		Where("llm_model_certifications.llm_model_id = ?", modelID).
+		Find(&certifications).Error
+	if err != nil {
+		return nil, err
+	}
+	return certifications, nil
+}

@@ -35,6 +35,11 @@ func (m *MockApplicationRepository) GetAssignedAgents(ctx context.Context, appID
 	return args.Get(0).([]domain.Agent), args.Error(1)
 }
 
+func (m *MockApplicationRepository) GetCertifications(ctx context.Context, appID uuid.UUID) ([]domain.Certification, error) {
+	args := m.Called(ctx, appID)
+	return args.Get(0).([]domain.Certification), args.Error(1)
+}
+
 func (m *MockApplicationRepository) CreateKey(ctx context.Context, key *domain.ApplicationKey) error {
 	args := m.Called(ctx, key)
 	return args.Error(0)
@@ -147,6 +152,26 @@ func TestApplicationService_ListAssignedAgents(t *testing.T) {
 		_, err := service.ListAssignedAgents(ctx, appID)
 		assert.Error(t, err)
 		assert.Equal(t, "db error", err.Error())
+		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestApplicationService_ListApplicationCertifications(t *testing.T) {
+	ctx := context.Background()
+	appID := uuid.New()
+
+	t.Run("Success", func(t *testing.T) {
+		mockRepo := new(MockApplicationRepository)
+		service := NewApplicationService(mockRepo)
+
+		expectedCerts := []domain.Certification{
+			{Name: "SOC2"},
+		}
+		mockRepo.On("GetCertifications", ctx, appID).Return(expectedCerts, nil)
+
+		certs, err := service.ListApplicationCertifications(ctx, appID)
+		assert.NoError(t, err)
+		assert.Len(t, certs, 1)
 		mockRepo.AssertExpectations(t)
 	})
 }

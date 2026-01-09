@@ -48,6 +48,14 @@ func (m *MockLLMRepository) ListAgentsUsingModel(ctx context.Context, modelID uu
 	return args.Get(0).([]domain.Agent), args.Error(1)
 }
 
+func (m *MockLLMRepository) GetCertifications(ctx context.Context, modelID uuid.UUID) ([]domain.Certification, error) {
+	args := m.Called(ctx, modelID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]domain.Certification), args.Error(1)
+}
+
 func TestLLMService_ListProviders(t *testing.T) {
 	ctx := context.Background()
 
@@ -171,6 +179,26 @@ func TestLLMService_ListAgentsUsingModel(t *testing.T) {
 		agents, err := service.ListAgentsUsingModel(ctx, modelID)
 		assert.NoError(t, err)
 		assert.Equal(t, len(expectedAgents), len(agents))
+		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestLLMService_ListModelCertifications(t *testing.T) {
+	ctx := context.Background()
+	modelID := uuid.New()
+
+	t.Run("Success", func(t *testing.T) {
+		mockRepo := new(MockLLMRepository)
+		service := NewLLMService(mockRepo)
+
+		expectedCerts := []domain.Certification{
+			{Name: "EU AI Act Compliant"},
+		}
+		mockRepo.On("GetCertifications", ctx, modelID).Return(expectedCerts, nil)
+
+		certs, err := service.ListModelCertifications(ctx, modelID)
+		assert.NoError(t, err)
+		assert.Equal(t, len(expectedCerts), len(certs))
 		mockRepo.AssertExpectations(t)
 	})
 }

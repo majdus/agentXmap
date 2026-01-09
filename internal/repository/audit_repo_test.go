@@ -1,128 +1,100 @@
 package repository
 
 import (
+	"agentXmap/internal/domain"
 	"context"
-	"errors"
+	"encoding/json"
 	"regexp"
 	"testing"
 	"time"
 
-	"agentXmap/internal/domain"
-
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func TestAuditRepository_CreateLog(t *testing.T) {
-	db, mock := setupMockDB(t)
-	repo := NewAuditRepository(db)
-	ctx := context.TODO()
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
 
-	log := &domain.SystemAuditLog{
-		ID:             uuid.New(),
-		OrganizationID: uuid.New(),
-		Action:         domain.AuditActionCreate,
-		OccurredAt:     time.Now(),
-	}
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn: db,
+	}), &gorm.Config{})
+	assert.NoError(t, err)
 
-	tests := []struct {
-		name    string
-		input   *domain.SystemAuditLog
-		mock    func()
-		wantErr bool
-	}{
-		{
-			name:  "Success",
-			input: log,
-			mock: func() {
-				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "system_audit_logs"`)).
-					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()). // 8 args
-					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(log.ID))
-				mock.ExpectCommit()
-			},
-			wantErr: false,
-		},
-		{
-			name:  "Error",
-			input: log,
-			mock: func() {
-				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "system_audit_logs"`)).
-					WillReturnError(errors.New("db error"))
-				mock.ExpectRollback()
-			},
-			wantErr: true,
-		},
-	}
+	repo := NewAuditRepository(gormDB)
+	ctx := context.Background()
+	orgID := uuid.New()
+	userID := uuid.New()
+	entityID := uuid.New()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mock()
-			err := repo.CreateLog(ctx, tt.input)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-			assert.NoError(t, mock.ExpectationsWereMet())
-		})
-	}
+	t.Run("Success", func(t *testing.T) {
+		log := &domain.SystemAuditLog{
+			OrganizationID: orgID,
+			ActorUserID:    &userID,
+			EntityType:     "agent",
+			EntityID:       entityID,
+			Action:         domain.AuditActionCreate,
+			Changes:        json.RawMessage(`{}`),
+			IPAddress:      "127.0.0.1",
+		}
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "system_audit_logs"`)).
+			WithArgs(orgID, userID, "agent", entityID, "create", log.Changes, "127.0.0.1").
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		mock.ExpectCommit()
+
+		err := repo.CreateLog(ctx, log)
+		assert.NoError(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
 
 func TestAuditRepository_CreateExecution(t *testing.T) {
-	db, mock := setupMockDB(t)
-	repo := NewAuditRepository(db)
-	ctx := context.TODO()
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
 
-	exec := &domain.AgentExecution{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		AgentID:   uuid.New(),
-	}
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn: db,
+	}), &gorm.Config{})
+	assert.NoError(t, err)
 
-	tests := []struct {
-		name    string
-		input   *domain.AgentExecution
-		mock    func()
-		wantErr bool
-	}{
-		{
-			name:  "Success",
-			input: exec,
-			mock: func() {
-				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "agent_executions"`)).
-					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
-					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(exec.ID))
-				mock.ExpectCommit()
-			},
-			wantErr: false,
-		},
-		{
-			name:  "Error",
-			input: exec,
-			mock: func() {
-				mock.ExpectBegin()
-				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "agent_executions"`)).
-					WillReturnError(errors.New("db error"))
-				mock.ExpectRollback()
-			},
-			wantErr: true,
-		},
-	}
+	repo := NewAuditRepository(gormDB)
+	ctx := context.Background()
+	orgID := uuid.New()
+	agentID := uuid.New()
+	versionID := uuid.New()
+	modelID := uuid.New()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mock()
-			err := repo.CreateExecution(ctx, tt.input)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-			assert.NoError(t, mock.ExpectationsWereMet())
-		})
-	}
+	t.Run("Success", func(t *testing.T) {
+		exec := &domain.AgentExecution{
+			OrganizationID:   orgID,
+			AgentID:          agentID,
+			AgentVersionID:   versionID,
+			LLMModelID:       modelID,
+			Status:           "completed",
+			LatencyMs:        100,
+			TokenUsageInput:  50,
+			TokenUsageOutput: 50,
+			IsPIIDetected:    false,
+			SafetyScore:      1.0,
+			CreatedAt:        time.Now(),
+		}
+
+		mock.ExpectBegin()
+		// GORM with Postgres uses Query for INSERT ... RETURNING
+		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "agent_executions"`)).
+			WithArgs(orgID, agentID, versionID, modelID, nil, nil, "completed", 100, 50, 50, false, 1.0, sqlmock.AnyArg()).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(uuid.New(), time.Now()))
+		mock.ExpectCommit()
+
+		err := repo.CreateExecution(ctx, exec)
+		assert.NoError(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }

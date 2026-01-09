@@ -12,6 +12,7 @@ type LLMService interface {
 	ListModels(ctx context.Context, providerID uuid.UUID) ([]domain.LLMModel, error)
 	GetModel(ctx context.Context, id uuid.UUID) (*domain.LLMModel, error)
 	ListAgentsUsingModel(ctx context.Context, modelID uuid.UUID) ([]domain.Agent, error)
+	ListModelCertifications(ctx context.Context, modelID uuid.UUID) ([]domain.Certification, error)
 }
 
 type DefaultLLMService struct {
@@ -36,4 +37,8 @@ func (s *DefaultLLMService) GetModel(ctx context.Context, id uuid.UUID) (*domain
 
 func (s *DefaultLLMService) ListAgentsUsingModel(ctx context.Context, modelID uuid.UUID) ([]domain.Agent, error) {
 	return s.llmRepo.ListAgentsUsingModel(ctx, modelID)
+}
+
+func (s *DefaultLLMService) ListModelCertifications(ctx context.Context, modelID uuid.UUID) ([]domain.Certification, error) {
+	return s.llmRepo.GetCertifications(ctx, modelID)
 }

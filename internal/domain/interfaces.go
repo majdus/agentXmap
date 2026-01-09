@@ -49,6 +49,7 @@ type AgentRepository interface {
 	GetAssignedAgents(ctx context.Context, userID uuid.UUID) ([]Agent, error)
 	GetAssignedLLMs(ctx context.Context, agentID uuid.UUID) ([]AgentLLM, error)
 	GetAssignedApplications(ctx context.Context, agentID uuid.UUID) ([]Application, error)
+	GetCertifications(ctx context.Context, agentID uuid.UUID) ([]Certification, error)
 }
 
 // LLMRepository defines interactions with LLM configurations.
@@ -57,6 +58,7 @@ type LLMRepository interface {
 	GetModel(ctx context.Context, id uuid.UUID) (*LLMModel, error)
 	ListModels(ctx context.Context, providerID uuid.UUID) ([]LLMModel, error)
 	ListAgentsUsingModel(ctx context.Context, modelID uuid.UUID) ([]Agent, error)
+	GetCertifications(ctx context.Context, modelID uuid.UUID) ([]Certification, error)
 }
 
 // AuditRepository for compliance logging.
@@ -70,6 +72,7 @@ type ApplicationRepository interface {
 	Create(ctx context.Context, app *Application) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Application, error)
 	GetAssignedAgents(ctx context.Context, appID uuid.UUID) ([]Agent, error)
+	GetCertifications(ctx context.Context, appID uuid.UUID) ([]Certification, error)
 	CreateKey(ctx context.Context, key *ApplicationKey) error
 }
 

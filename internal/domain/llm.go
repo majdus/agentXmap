@@ -26,7 +26,8 @@ type LLMModel struct {
 	CostPerMillionTokens float64   `gorm:"type:decimal(10,4)" json:"cost_per_million_tokens" example:"10.00"`
 	IsActive             bool      `gorm:"default:true" json:"is_active"`
 
-	Provider LLMProvider `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"provider,omitempty"`
+	Provider       LLMProvider             `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"provider,omitempty"`
+	Certifications []LLMModelCertification `gorm:"foreignKey:LLMModelID" json:"certifications,omitempty"`
 }
 
 type AgentLLM struct {

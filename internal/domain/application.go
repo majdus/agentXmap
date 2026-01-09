@@ -15,9 +15,10 @@ type Application struct {
 	CreatedAt   time.Time `gorm:"default:now()" json:"created_at"`
 	UpdatedAt   time.Time `gorm:"default:now()" json:"updated_at"`
 
-	Owner       User                     `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"owner,omitempty"`
-	Keys        []ApplicationKey         `gorm:"foreignKey:ApplicationID" json:"keys,omitempty"`
-	AgentAccess []ApplicationAgentAccess `gorm:"foreignKey:ApplicationID" json:"agent_access,omitempty"`
+	Owner          User                       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"owner,omitempty"`
+	Keys           []ApplicationKey           `gorm:"foreignKey:ApplicationID" json:"keys,omitempty"`
+	AgentAccess    []ApplicationAgentAccess   `gorm:"foreignKey:ApplicationID" json:"agent_access,omitempty"`
+	Certifications []ApplicationCertification `gorm:"foreignKey:ApplicationID" json:"certifications,omitempty"`
 }
 
 type ApplicationKey struct {

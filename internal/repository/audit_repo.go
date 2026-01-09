@@ -21,6 +21,5 @@ func (r *auditRepository) CreateLog(ctx context.Context, log *domain.SystemAudit
 }
 
 func (r *auditRepository) CreateExecution(ctx context.Context, exec *domain.AgentExecution) error {
-	// For partitioned tables, simple Insert usually works if specific partitions exist.
 	return r.db.WithContext(ctx).Create(exec).Error
 }

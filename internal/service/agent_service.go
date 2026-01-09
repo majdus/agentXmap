@@ -22,6 +22,7 @@ type AgentService interface {
 	ListAssignedAgents(ctx context.Context, userID uuid.UUID) ([]domain.Agent, error)
 	GetAgentLLMs(ctx context.Context, agentID uuid.UUID) ([]domain.AgentLLM, error)
 	ListAssignedApplications(ctx context.Context, agentID uuid.UUID) ([]domain.Application, error)
+	ListAgentCertifications(ctx context.Context, agentID uuid.UUID) ([]domain.Certification, error)
 	UpdateAgent(ctx context.Context, id, userID uuid.UUID, name string, config json.RawMessage, status domain.AgentStatus) (*domain.Agent, error)
 	DeleteAgent(ctx context.Context, id uuid.UUID) error
 }
@@ -144,6 +145,10 @@ func (s *DefaultAgentService) GetAgentLLMs(ctx context.Context, agentID uuid.UUI
 
 func (s *DefaultAgentService) ListAssignedApplications(ctx context.Context, agentID uuid.UUID) ([]domain.Application, error) {
 	return s.agentRepo.GetAssignedApplications(ctx, agentID)
+}
+
+func (s *DefaultAgentService) ListAgentCertifications(ctx context.Context, agentID uuid.UUID) ([]domain.Certification, error) {
+	return s.agentRepo.GetCertifications(ctx, agentID)
 }
 
 func (s *DefaultAgentService) UpdateAgent(ctx context.Context, id, userID uuid.UUID, name string, config json.RawMessage, status domain.AgentStatus) (*domain.Agent, error) {

@@ -131,3 +131,15 @@ func (r *agentRepository) GetAssignedApplications(ctx context.Context, agentID u
 	}
 	return apps, nil
 }
+
+func (r *agentRepository) GetCertifications(ctx context.Context, agentID uuid.UUID) ([]domain.Certification, error) {
+	var certifications []domain.Certification
+	err := r.db.WithContext(ctx).
+		Joins("JOIN agent_certifications ON agent_certifications.certification_id = certifications.id").
+		Where("agent_certifications.agent_id = ?", agentID).
+		Find(&certifications).Error
+	if err != nil {
+		return nil, err
+	}
+	return certifications, nil
+}

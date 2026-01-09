@@ -90,6 +90,11 @@ func (m *MockAgentRepository) GetAssignedApplications(ctx context.Context, agent
 	return args.Get(0).([]domain.Application), args.Error(1)
 }
 
+func (m *MockAgentRepository) GetCertifications(ctx context.Context, agentID uuid.UUID) ([]domain.Certification, error) {
+	args := m.Called(ctx, agentID)
+	return args.Get(0).([]domain.Certification), args.Error(1)
+}
+
 func TestAgentService_CreateAgent(t *testing.T) {
 	mockRepo := new(MockAgentRepository)
 	service := NewAgentService(mockRepo)
@@ -441,6 +446,26 @@ func TestAgentService_GetActiveMonthlyCost(t *testing.T) {
 		assert.NoError(t, err)
 		// 100 (Monthly) + 1200/12 (Yearly=100) + 0 (OneTime) = 200
 		assert.Equal(t, 200.0, cost)
+		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestAgentService_ListAgentCertifications(t *testing.T) {
+	ctx := context.Background()
+	agentID := uuid.New()
+
+	t.Run("Success", func(t *testing.T) {
+		mockRepo := new(MockAgentRepository)
+		service := NewAgentService(mockRepo)
+
+		expectedCerts := []domain.Certification{
+			{Name: "ISO 27001"},
+		}
+		mockRepo.On("GetCertifications", ctx, agentID).Return(expectedCerts, nil)
+
+		certs, err := service.ListAgentCertifications(ctx, agentID)
+		assert.NoError(t, err)
+		assert.Len(t, certs, 1)
 		mockRepo.AssertExpectations(t)
 	})
 }
