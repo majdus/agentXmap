@@ -15,6 +15,13 @@ type UserRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
+// OrganizationRepository defines access to Organizations.
+type OrganizationRepository interface {
+	Create(ctx context.Context, org *Organization) error
+	GetByID(ctx context.Context, id uuid.UUID) (*Organization, error)
+	GetBySlug(ctx context.Context, slug string) (*Organization, error)
+}
+
 // AgentRepository defines agent persistence.
 type AgentRepository interface {
 	Create(ctx context.Context, agent *Agent) error
