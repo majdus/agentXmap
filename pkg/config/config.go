@@ -7,9 +7,19 @@ import (
 )
 
 type Config struct {
-	Server ServerConfig `mapstructure:"server"`
-	App    AppConfig    `mapstructure:"app"`
-	Logger LoggerConfig `mapstructure:"logger"`
+	Server   ServerConfig   `mapstructure:"server"`
+	App      AppConfig      `mapstructure:"app"`
+	Logger   LoggerConfig   `mapstructure:"logger"`
+	Database DatabaseConfig `mapstructure:"database"`
+}
+
+type DatabaseConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	DBName   string `mapstructure:"dbname"`
+	SSLMode  string `mapstructure:"sslmode"`
 }
 
 type ServerConfig struct {

@@ -9,3 +9,11 @@ app:
 logger:
   level: "debug" # debug, info, warn, error
   encoding: "json" # json, console
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  password: "password" # CHANGE ME
+  dbname: "agentxmap"
+  sslmode: "disable"
