@@ -28,3 +28,14 @@ func (r *resourceRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain
 	}
 	return &res, nil
 }
+
+func (r *resourceRepository) ListAgentsWithAccess(ctx context.Context, resourceID uuid.UUID) ([]domain.Agent, error) {
+	var agents []domain.Agent
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN agent_resource_accesses ON agent_resource_accesses.agent_id = agents.id").
+		Where("agent_resource_accesses.resource_id = ?", resourceID).
+		Find(&agents).Error; err != nil {
+		return nil, err
+	}
+	return agents, nil
+}

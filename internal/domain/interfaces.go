@@ -73,4 +73,5 @@ type ApplicationRepository interface {
 type ResourceRepository interface {
 	Create(ctx context.Context, res *Resource) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Resource, error)
+	ListAgentsWithAccess(ctx context.Context, resourceID uuid.UUID) ([]Agent, error)
 }

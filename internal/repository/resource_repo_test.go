@@ -12,6 +12,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
 
 func TestResourceRepository_GetByID(t *testing.T) {
@@ -49,6 +50,16 @@ func TestResourceRepository_GetByID(t *testing.T) {
 					WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow("postgres", "PostgreSQL"))
 			},
 			wantErr: false,
+		},
+		{
+			name: "Not Found",
+			id:   id,
+			mock: func() {
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "resources" WHERE id = $1`)).
+					WithArgs(id, 1).
+					WillReturnError(gorm.ErrRecordNotFound)
+			},
+			wantErr: true,
 		},
 	}
 
