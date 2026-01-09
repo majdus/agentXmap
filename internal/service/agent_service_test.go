@@ -39,6 +39,11 @@ func (m *MockAgentRepository) ListByOrg(ctx context.Context, orgID uuid.UUID) ([
 	return args.Get(0).([]domain.Agent), args.Error(1)
 }
 
+func (m *MockAgentRepository) ListByStatus(ctx context.Context, orgID uuid.UUID, status domain.AgentStatus) ([]domain.Agent, error) {
+	args := m.Called(ctx, orgID, status)
+	return args.Get(0).([]domain.Agent), args.Error(1)
+}
+
 func (m *MockAgentRepository) Update(ctx context.Context, agent *domain.Agent) error {
 	args := m.Called(ctx, agent)
 	return args.Error(0)
@@ -73,6 +78,11 @@ func (m *MockAgentRepository) GetAssignedUsers(ctx context.Context, agentID uuid
 func (m *MockAgentRepository) GetAssignedLLMs(ctx context.Context, agentID uuid.UUID) ([]domain.AgentLLM, error) {
 	args := m.Called(ctx, agentID)
 	return args.Get(0).([]domain.AgentLLM), args.Error(1)
+}
+
+func (m *MockAgentRepository) GetAssignedAgents(ctx context.Context, userID uuid.UUID) ([]domain.Agent, error) {
+	args := m.Called(ctx, userID)
+	return args.Get(0).([]domain.Agent), args.Error(1)
 }
 
 func (m *MockAgentRepository) GetAssignedApplications(ctx context.Context, agentID uuid.UUID) ([]domain.Application, error) {
@@ -341,6 +351,82 @@ func TestAgentService_ListAssignedApplications(t *testing.T) {
 		_, err := service.ListAssignedApplications(ctx, agentID)
 		assert.Error(t, err)
 		assert.Equal(t, "db error", err.Error())
+		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestAgentService_ListAssignedAgents(t *testing.T) {
+	ctx := context.Background()
+	userID := uuid.New()
+
+	t.Run("Success", func(t *testing.T) {
+		mockRepo := new(MockAgentRepository)
+		service := NewAgentService(mockRepo)
+
+		expectedAgents := []domain.Agent{
+			{Name: "Agent X"},
+		}
+		mockRepo.On("GetAssignedAgents", ctx, userID).Return(expectedAgents, nil)
+
+		agents, err := service.ListAssignedAgents(ctx, userID)
+		assert.NoError(t, err)
+		assert.Len(t, agents, 1)
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		mockRepo := new(MockAgentRepository)
+		service := NewAgentService(mockRepo)
+
+		mockRepo.On("GetAssignedAgents", ctx, userID).Return([]domain.Agent{}, errors.New("db error"))
+
+		_, err := service.ListAssignedAgents(ctx, userID)
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
+		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestAgentService_ListAgentsByStatus(t *testing.T) {
+	ctx := context.Background()
+	orgID := uuid.New()
+
+	t.Run("Success", func(t *testing.T) {
+		mockRepo := new(MockAgentRepository)
+		service := NewAgentService(mockRepo)
+
+		expectedAgents := []domain.Agent{
+			{Name: "Active Agent", Status: domain.AgentStatusActive},
+		}
+		mockRepo.On("ListByStatus", ctx, orgID, domain.AgentStatusActive).Return(expectedAgents, nil)
+
+		agents, err := service.ListAgentsByStatus(ctx, orgID, domain.AgentStatusActive)
+		assert.NoError(t, err)
+		assert.Len(t, agents, 1)
+		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestAgentService_GetActiveMonthlyCost(t *testing.T) {
+	ctx := context.Background()
+	orgID := uuid.New()
+
+	t.Run("Success", func(t *testing.T) {
+		mockRepo := new(MockAgentRepository)
+		service := NewAgentService(mockRepo)
+
+		activeAgents := []domain.Agent{
+			{Name: "Monthly Agent", Status: domain.AgentStatusActive, BillingCycle: domain.BillingCycleMonthly, CostAmount: 100.0},
+			{Name: "Yearly Agent", Status: domain.AgentStatusActive, BillingCycle: domain.BillingCycleYearly, CostAmount: 1200.0},
+			// OneTime should be ignored
+			{Name: "OneTime Agent", Status: domain.AgentStatusActive, BillingCycle: domain.BillingCycleOneTime, CostAmount: 500.0},
+		}
+		mockRepo.On("ListByStatus", ctx, orgID, domain.AgentStatusActive).Return(activeAgents, nil)
+
+		cost, err := service.GetActiveMonthlyCost(ctx, orgID)
+		assert.NoError(t, err)
+		// 100 (Monthly) + 1200/12 (Yearly=100) + 0 (OneTime) = 200
+		assert.Equal(t, 200.0, cost)
 		mockRepo.AssertExpectations(t)
 	})
 }

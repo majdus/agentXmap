@@ -16,6 +16,7 @@ import (
 type ApplicationService interface {
 	CreateApplication(ctx context.Context, ownerID uuid.UUID, name, description string) (*domain.Application, error)
 	GetApplication(ctx context.Context, id uuid.UUID) (*domain.Application, error)
+	ListAssignedAgents(ctx context.Context, appID uuid.UUID) ([]domain.Agent, error)
 	CreateAPIKey(ctx context.Context, appID uuid.UUID, name string) (string, *domain.ApplicationKey, error)
 }
 
@@ -52,6 +53,10 @@ func (s *DefaultApplicationService) GetApplication(ctx context.Context, id uuid.
 		return nil, errors.New("application not found")
 	}
 	return app, nil
+}
+
+func (s *DefaultApplicationService) ListAssignedAgents(ctx context.Context, appID uuid.UUID) ([]domain.Agent, error) {
+	return s.appRepo.GetAssignedAgents(ctx, appID)
 }
 
 func (s *DefaultApplicationService) CreateAPIKey(ctx context.Context, appID uuid.UUID, name string) (string, *domain.ApplicationKey, error) {

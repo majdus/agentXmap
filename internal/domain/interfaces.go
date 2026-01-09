@@ -34,6 +34,7 @@ type AgentRepository interface {
 	Create(ctx context.Context, agent *Agent) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Agent, error)
 	ListByOrg(ctx context.Context, orgID uuid.UUID) ([]Agent, error)
+	ListByStatus(ctx context.Context, orgID uuid.UUID, status AgentStatus) ([]Agent, error)
 	Update(ctx context.Context, agent *Agent) error
 	Delete(ctx context.Context, id uuid.UUID) error
 
@@ -45,6 +46,7 @@ type AgentRepository interface {
 
 	// Assignments
 	GetAssignedUsers(ctx context.Context, agentID uuid.UUID) ([]User, error)
+	GetAssignedAgents(ctx context.Context, userID uuid.UUID) ([]Agent, error)
 	GetAssignedLLMs(ctx context.Context, agentID uuid.UUID) ([]AgentLLM, error)
 	GetAssignedApplications(ctx context.Context, agentID uuid.UUID) ([]Application, error)
 }
@@ -67,6 +69,7 @@ type AuditRepository interface {
 type ApplicationRepository interface {
 	Create(ctx context.Context, app *Application) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Application, error)
+	GetAssignedAgents(ctx context.Context, appID uuid.UUID) ([]Agent, error)
 	CreateKey(ctx context.Context, key *ApplicationKey) error
 }
 

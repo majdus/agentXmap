@@ -30,6 +30,11 @@ func (m *MockApplicationRepository) GetByID(ctx context.Context, id uuid.UUID) (
 	return args.Get(0).(*domain.Application), args.Error(1)
 }
 
+func (m *MockApplicationRepository) GetAssignedAgents(ctx context.Context, appID uuid.UUID) ([]domain.Agent, error) {
+	args := m.Called(ctx, appID)
+	return args.Get(0).([]domain.Agent), args.Error(1)
+}
+
 func (m *MockApplicationRepository) CreateKey(ctx context.Context, key *domain.ApplicationKey) error {
 	args := m.Called(ctx, key)
 	return args.Error(0)
@@ -110,6 +115,38 @@ func TestApplicationService_CreateAPIKey(t *testing.T) {
 		assert.NotEmpty(t, key.KeyHash)
 		assert.Equal(t, "Test Key", key.Name)
 		assert.Equal(t, appID, key.ApplicationID)
+		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestApplicationService_ListAssignedAgents(t *testing.T) {
+	ctx := context.Background()
+	appID := uuid.New()
+
+	t.Run("Success", func(t *testing.T) {
+		mockRepo := new(MockApplicationRepository)
+		service := NewApplicationService(mockRepo)
+
+		expectedAgents := []domain.Agent{
+			{Name: "Agent Y"},
+		}
+		mockRepo.On("GetAssignedAgents", ctx, appID).Return(expectedAgents, nil)
+
+		agents, err := service.ListAssignedAgents(ctx, appID)
+		assert.NoError(t, err)
+		assert.Len(t, agents, 1)
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		mockRepo := new(MockApplicationRepository)
+		service := NewApplicationService(mockRepo)
+
+		mockRepo.On("GetAssignedAgents", ctx, appID).Return([]domain.Agent{}, errors.New("db error"))
+
+		_, err := service.ListAssignedAgents(ctx, appID)
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
 		mockRepo.AssertExpectations(t)
 	})
 }

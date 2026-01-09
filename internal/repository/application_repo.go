@@ -39,3 +39,17 @@ func (r *applicationRepository) GetByID(ctx context.Context, id uuid.UUID) (*dom
 func (r *applicationRepository) CreateKey(ctx context.Context, key *domain.ApplicationKey) error {
 	return r.db.WithContext(ctx).Create(key).Error
 }
+
+func (r *applicationRepository) GetAssignedAgents(ctx context.Context, appID uuid.UUID) ([]domain.Agent, error) {
+	var agents []domain.Agent
+	// Join ApplicationAgentAccess to find agents linked to this application
+	// Remember ApplicationAgentAccess has ApplicationID and AgentID
+	err := r.db.WithContext(ctx).
+		Joins("JOIN application_agent_accesses ON application_agent_accesses.agent_id = agents.id").
+		Where("application_agent_accesses.application_id = ?", appID).
+		Find(&agents).Error
+	if err != nil {
+		return nil, err
+	}
+	return agents, nil
+}

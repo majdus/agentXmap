@@ -43,6 +43,14 @@ func (r *agentRepository) ListByOrg(ctx context.Context, orgID uuid.UUID) ([]dom
 	return agents, nil
 }
 
+func (r *agentRepository) ListByStatus(ctx context.Context, orgID uuid.UUID, status domain.AgentStatus) ([]domain.Agent, error) {
+	var agents []domain.Agent
+	if err := r.db.WithContext(ctx).Where("organization_id = ? AND status = ?", orgID, status).Find(&agents).Error; err != nil {
+		return nil, err
+	}
+	return agents, nil
+}
+
 func (r *agentRepository) GetAssignedLLMs(ctx context.Context, agentID uuid.UUID) ([]domain.AgentLLM, error) {
 	var agentLLMs []domain.AgentLLM
 	// Load AgentLLM with associated LLMModel details
@@ -91,6 +99,19 @@ func (r *agentRepository) GetAssignedUsers(ctx context.Context, agentID uuid.UUI
 		return nil, err
 	}
 	return users, nil
+}
+
+func (r *agentRepository) GetAssignedAgents(ctx context.Context, userID uuid.UUID) ([]domain.Agent, error) {
+	var agents []domain.Agent
+	// Join AgentAssignment to find agents linked to this user
+	err := r.db.WithContext(ctx).
+		Joins("JOIN agent_assignments ON agent_assignments.agent_id = agents.id").
+		Where("agent_assignments.user_id = ?", userID).
+		Find(&agents).Error
+	if err != nil {
+		return nil, err
+	}
+	return agents, nil
 }
 
 func (r *agentRepository) GetAssignedApplications(ctx context.Context, agentID uuid.UUID) ([]domain.Application, error) {

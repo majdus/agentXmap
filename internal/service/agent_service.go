@@ -15,8 +15,11 @@ type AgentService interface {
 	CreateAgent(ctx context.Context, orgID, userID uuid.UUID, name string, config json.RawMessage) (*domain.Agent, error)
 	GetAgent(ctx context.Context, id uuid.UUID) (*domain.Agent, error)
 	ListAgents(ctx context.Context, orgID uuid.UUID) ([]domain.Agent, error)
+	ListAgentsByStatus(ctx context.Context, orgID uuid.UUID, status domain.AgentStatus) ([]domain.Agent, error)
+	GetActiveMonthlyCost(ctx context.Context, orgID uuid.UUID) (float64, error)
 	ListAgentResources(ctx context.Context, agentID uuid.UUID) ([]domain.Resource, error)
 	ListAssignedUsers(ctx context.Context, agentID uuid.UUID) ([]domain.User, error)
+	ListAssignedAgents(ctx context.Context, userID uuid.UUID) ([]domain.Agent, error)
 	GetAgentLLMs(ctx context.Context, agentID uuid.UUID) ([]domain.AgentLLM, error)
 	ListAssignedApplications(ctx context.Context, agentID uuid.UUID) ([]domain.Application, error)
 	UpdateAgent(ctx context.Context, id, userID uuid.UUID, name string, config json.RawMessage, status domain.AgentStatus) (*domain.Agent, error)
@@ -84,6 +87,41 @@ func (s *DefaultAgentService) ListAgents(ctx context.Context, orgID uuid.UUID) (
 	return s.agentRepo.ListByOrg(ctx, orgID)
 }
 
+func (s *DefaultAgentService) ListAgentsByStatus(ctx context.Context, orgID uuid.UUID, status domain.AgentStatus) ([]domain.Agent, error) {
+	return s.agentRepo.ListByStatus(ctx, orgID, status)
+}
+
+func (s *DefaultAgentService) GetActiveMonthlyCost(ctx context.Context, orgID uuid.UUID) (float64, error) {
+	agents, err := s.agentRepo.ListByStatus(ctx, orgID, domain.AgentStatusActive)
+	if err != nil {
+		return 0, err
+	}
+
+	var totalCost float64
+	for _, agent := range agents {
+		// Logic:
+		// Monthly -> CostAmount
+		// Yearly -> CostAmount / 12
+		// OneTime -> 0 (Not recurring monthly)
+		// Custom -> CostAmount (Assume custom is entered as normalized, or just take it)
+		switch agent.BillingCycle {
+		case domain.BillingCycleMonthly:
+			totalCost += agent.CostAmount
+		case domain.BillingCycleYearly:
+			totalCost += agent.CostAmount / 12.0
+		case domain.BillingCycleOneTime:
+			// One time costs are not monthly recurring
+			continue
+		case domain.BillingCycleCustom:
+			totalCost += agent.CostAmount
+		default:
+			// Default to monthly if not specified/unknown, or safer: CostAmount
+			totalCost += agent.CostAmount
+		}
+	}
+	return totalCost, nil
+}
+
 func (s *DefaultAgentService) ListAgentResources(ctx context.Context, agentID uuid.UUID) ([]domain.Resource, error) {
 	// First check if agent exists?
 	// The repo query will just return empty list if agent doesn't exist or has no resources.
@@ -94,6 +132,10 @@ func (s *DefaultAgentService) ListAgentResources(ctx context.Context, agentID uu
 
 func (s *DefaultAgentService) ListAssignedUsers(ctx context.Context, agentID uuid.UUID) ([]domain.User, error) {
 	return s.agentRepo.GetAssignedUsers(ctx, agentID)
+}
+
+func (s *DefaultAgentService) ListAssignedAgents(ctx context.Context, userID uuid.UUID) ([]domain.Agent, error) {
+	return s.agentRepo.GetAssignedAgents(ctx, userID)
 }
 
 func (s *DefaultAgentService) GetAgentLLMs(ctx context.Context, agentID uuid.UUID) ([]domain.AgentLLM, error) {
