@@ -121,6 +121,20 @@ func TestAgentService_CreateAgent(t *testing.T) {
 		_, err := service.CreateAgent(ctx, orgID, userID, "", nil)
 		assert.Error(t, err)
 	})
+
+	t.Run("Duplicate Name", func(t *testing.T) {
+		mockRepo := new(MockAgentRepository)
+		service := NewAgentService(mockRepo)
+		name := "Duplicate Agent"
+		config := json.RawMessage(`{}`)
+
+		// Simulate duplicate key error from DB
+		mockRepo.On("Create", ctx, mock.Anything).Return(errors.New("duplicate key value violates unique constraint"))
+
+		_, err := service.CreateAgent(ctx, orgID, userID, name, config)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "duplicate key")
+	})
 }
 
 func TestAgentService_UpdateAgent(t *testing.T) {

@@ -26,8 +26,8 @@ const (
 // Agent represents an AI Agent.
 type Agent struct {
 	ID             uuid.UUID       `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	OrganizationID uuid.UUID       `gorm:"type:uuid;not null" json:"organization_id"`
-	Name           string          `gorm:"type:varchar(255);not null" json:"name"`
+	OrganizationID uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_org_agent_name" json:"organization_id"`
+	Name           string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_org_agent_name" json:"name"`
 	Status         AgentStatus     `gorm:"type:agent_status;default:'active'" json:"status"`
 	CostAmount     float64         `gorm:"type:decimal(10,2);default:0.00" json:"cost_amount"`
 	CostCurrency   string          `gorm:"type:varchar(3);default:'EUR'" json:"cost_currency"`
