@@ -92,3 +92,21 @@ func (r *agentRepository) GetAssignedUsers(ctx context.Context, agentID uuid.UUI
 	}
 	return users, nil
 }
+
+func (r *agentRepository) GetAssignedApplications(ctx context.Context, agentID uuid.UUID) ([]domain.Application, error) {
+	var apps []domain.Application
+	// Join ApplicationAgentAccess (and then Application if needed, but ApplicationAgentAccess belongs to Application? No, ApplicationAgentAccess links Application and Agent)
+	// struct: ApplicationAgentAccess has ApplicationID and AgentID.
+	// We want to list Applications.
+	// JOIN application_agent_accesses ON application_agent_accesses.application_id = applications.id
+	// WHERE application_agent_accesses.agent_id = ?
+
+	err := r.db.WithContext(ctx).
+		Joins("JOIN application_agent_accesses ON application_agent_accesses.application_id = applications.id").
+		Where("application_agent_accesses.agent_id = ?", agentID).
+		Find(&apps).Error
+	if err != nil {
+		return nil, err
+	}
+	return apps, nil
+}

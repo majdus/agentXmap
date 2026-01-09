@@ -46,6 +46,7 @@ type AgentRepository interface {
 	// Assignments
 	GetAssignedUsers(ctx context.Context, agentID uuid.UUID) ([]User, error)
 	GetAssignedLLMs(ctx context.Context, agentID uuid.UUID) ([]AgentLLM, error)
+	GetAssignedApplications(ctx context.Context, agentID uuid.UUID) ([]Application, error)
 }
 
 // LLMRepository defines interactions with LLM configurations.

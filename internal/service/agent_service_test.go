@@ -75,6 +75,11 @@ func (m *MockAgentRepository) GetAssignedLLMs(ctx context.Context, agentID uuid.
 	return args.Get(0).([]domain.AgentLLM), args.Error(1)
 }
 
+func (m *MockAgentRepository) GetAssignedApplications(ctx context.Context, agentID uuid.UUID) ([]domain.Application, error) {
+	args := m.Called(ctx, agentID)
+	return args.Get(0).([]domain.Application), args.Error(1)
+}
+
 func TestAgentService_CreateAgent(t *testing.T) {
 	mockRepo := new(MockAgentRepository)
 	service := NewAgentService(mockRepo)
@@ -304,6 +309,38 @@ func TestAgentService_GetAgentLLMs(t *testing.T) {
 		llms, err := service.GetAgentLLMs(ctx, agentID)
 		assert.NoError(t, err)
 		assert.Len(t, llms, 1)
+		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestAgentService_ListAssignedApplications(t *testing.T) {
+	ctx := context.Background()
+	agentID := uuid.New()
+
+	t.Run("Success", func(t *testing.T) {
+		mockRepo := new(MockAgentRepository)
+		service := NewAgentService(mockRepo)
+
+		expectedApps := []domain.Application{
+			{Name: "App A"},
+		}
+		mockRepo.On("GetAssignedApplications", ctx, agentID).Return(expectedApps, nil)
+
+		apps, err := service.ListAssignedApplications(ctx, agentID)
+		assert.NoError(t, err)
+		assert.Len(t, apps, 1)
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		mockRepo := new(MockAgentRepository)
+		service := NewAgentService(mockRepo)
+
+		mockRepo.On("GetAssignedApplications", ctx, agentID).Return([]domain.Application{}, errors.New("db error"))
+
+		_, err := service.ListAssignedApplications(ctx, agentID)
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
 		mockRepo.AssertExpectations(t)
 	})
 }
