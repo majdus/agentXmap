@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"agentXmap/internal/repository"
+	"agentXmap/internal/service"
 	"agentXmap/pkg/config"
 	"agentXmap/pkg/logger"
 
@@ -37,7 +39,39 @@ func main() {
 	defer logger.Sync()
 	logger.Log.Info("Starting agentXmap API", zap.String("version", cfg.App.Version), zap.String("env", cfg.Server.Mode))
 
-	// 3. Setup Gin
+	// 3. Database Connection
+	db, err := repository.InitDB(*cfg)
+	if err != nil {
+		logger.Log.Fatal("Failed to connect to database", zap.Error(err))
+	}
+	// Migrate database schema
+	if err := repository.AutoMigrate(db); err != nil {
+		logger.Log.Fatal("Failed to migrate database", zap.Error(err))
+	}
+
+	// 4. Init Repositories & Services
+	userRepo := repository.NewUserRepository(db)
+	invitationRepo := repository.NewInvitationRepository(db)
+	identityService := service.NewIdentityService(userRepo, invitationRepo)
+
+	// 5. Initial Admin Creation
+	if cfg.InitialAdmin.Email != "" && cfg.InitialAdmin.Password != "" {
+		ctx := context.Background()
+		logger.Log.Info("Attempting to create initial admin user...", zap.String("email", cfg.InitialAdmin.Email))
+		user, err := identityService.SignUp(ctx, cfg.InitialAdmin.Email, cfg.InitialAdmin.Password)
+		if err != nil {
+			if err.Error() == "user already exists" {
+				logger.Log.Info("Initial admin user already exists", zap.String("email", cfg.InitialAdmin.Email))
+			} else {
+				logger.Log.Error("Failed to create initial admin user", zap.Error(err))
+				// Optional: Exit on failure? For now, we continue.
+			}
+		} else {
+			logger.Log.Info("Initial admin user created successfully", zap.String("id", user.ID.String()))
+		}
+	}
+
+	// 6. Setup Gin
 	if cfg.Server.Mode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -45,7 +79,7 @@ func main() {
 	r.Use(gin.Recovery())
 	// TODO: Add custom logger middleware
 
-	// 4. Routes
+	// 7. Routes
 	api := r.Group("/api/v1")
 	{
 		api.GET("/health", func(c *gin.Context) {
@@ -57,7 +91,7 @@ func main() {
 		})
 	}
 
-	// 5. Start Server
+	// 8. Start Server
 	srv := &http.Server{
 		Addr:    ":" + cfg.Server.Port,
 		Handler: r,

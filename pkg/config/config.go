@@ -7,10 +7,16 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	App      AppConfig      `mapstructure:"app"`
-	Logger   LoggerConfig   `mapstructure:"logger"`
-	Database DatabaseConfig `mapstructure:"database"`
+	Server       ServerConfig       `mapstructure:"server"`
+	App          AppConfig          `mapstructure:"app"`
+	Logger       LoggerConfig       `mapstructure:"logger"`
+	Database     DatabaseConfig     `mapstructure:"database"`
+	InitialAdmin InitialAdminConfig `mapstructure:"initial_admin"`
+}
+
+type InitialAdminConfig struct {
+	Email    string `mapstructure:"email"`
+	Password string `mapstructure:"password"`
 }
 
 type DatabaseConfig struct {
