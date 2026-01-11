@@ -43,7 +43,7 @@ type Invitation struct {
 	ID        uuid.UUID        `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	InvitorID uuid.UUID        `gorm:"type:uuid;not null" json:"invitor_id"`
 	Email     string           `gorm:"type:varchar(255);not null" json:"email"`
-	Token     string           `gorm:"type:varchar(255);not null;unique" json:"-"` // Token might be sensitive if exposed in lists
+	Token     string           `gorm:"type:varchar(255);not null;unique" json:"token"` // Token might be sensitive if exposed in lists
 	Role      UserRole         `gorm:"type:user_role;default:'user';not null" json:"role"`
 	Status    InvitationStatus `gorm:"type:invitation_status;default:'pending'" json:"status"`
 	ExpiresAt time.Time        `gorm:"not null" json:"expires_at"`

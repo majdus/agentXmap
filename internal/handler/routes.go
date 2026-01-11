@@ -10,7 +10,8 @@ func RegisterRoutes(r *gin.Engine, authHandler *AuthHandler) {
 	{
 		auth := api.Group("/auth")
 		{
-			auth.POST("/register", authHandler.Register)
+			auth.POST("/invite", authHandler.InviteUser)
+			auth.POST("/accept-invitation", authHandler.AcceptInvitation)
 			auth.POST("/login", authHandler.Login)
 		}
 	}

@@ -61,6 +61,7 @@ func InitDB(cfg config.Config) (*gorm.DB, error) {
 func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&domain.User{},
+		&domain.Invitation{}, // Added Invitation Model
 		&domain.Agent{},
 		&domain.AgentVersion{},
 		&domain.AgentAssignment{},
