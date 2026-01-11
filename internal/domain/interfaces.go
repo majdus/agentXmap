@@ -23,18 +23,14 @@ type InvitationRepository interface {
 }
 
 // OrganizationRepository defines access to Organizations.
-type OrganizationRepository interface {
-	Create(ctx context.Context, org *Organization) error
-	GetByID(ctx context.Context, id uuid.UUID) (*Organization, error)
-	GetBySlug(ctx context.Context, slug string) (*Organization, error)
-}
+// Removed for mono-tenant architecture
 
 // AgentRepository defines agent persistence.
 type AgentRepository interface {
 	Create(ctx context.Context, agent *Agent) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Agent, error)
-	ListByOrg(ctx context.Context, orgID uuid.UUID) ([]Agent, error)
-	ListByStatus(ctx context.Context, orgID uuid.UUID, status AgentStatus) ([]Agent, error)
+	List(ctx context.Context) ([]Agent, error)
+	ListByStatus(ctx context.Context, status AgentStatus) ([]Agent, error)
 	Update(ctx context.Context, agent *Agent) error
 	Delete(ctx context.Context, id uuid.UUID) error
 

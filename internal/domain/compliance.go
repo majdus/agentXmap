@@ -65,15 +65,14 @@ type ApplicationCertification struct {
 }
 
 type SystemAuditLog struct {
-	ID             uuid.UUID       `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	OrganizationID uuid.UUID       `gorm:"type:uuid;not null" json:"organization_id"`
-	ActorUserID    *uuid.UUID      `gorm:"type:uuid" json:"actor_user_id,omitempty"`
-	EntityType     string          `gorm:"type:varchar(50);not null" json:"entity_type" example:"agent"`
-	EntityID       uuid.UUID       `gorm:"type:uuid;not null" json:"entity_id"`
-	Action         AuditAction     `gorm:"type:audit_action;not null" json:"action" example:"update"`
-	Changes        json.RawMessage `gorm:"type:jsonb" json:"changes,omitempty"`
-	IPAddress      string          `gorm:"type:varchar(45)" json:"ip_address,omitempty"`
-	OccurredAt     time.Time       `gorm:"default:now()" json:"occurred_at"`
+	ID          uuid.UUID       `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+	ActorUserID *uuid.UUID      `gorm:"type:uuid" json:"actor_user_id,omitempty"`
+	EntityType  string          `gorm:"type:varchar(50);not null" json:"entity_type" example:"agent"`
+	EntityID    uuid.UUID       `gorm:"type:uuid;not null" json:"entity_id"`
+	Action      AuditAction     `gorm:"type:audit_action;not null" json:"action" example:"update"`
+	Changes     json.RawMessage `gorm:"type:jsonb" json:"changes,omitempty"`
+	IPAddress   string          `gorm:"type:varchar(45)" json:"ip_address,omitempty"`
+	OccurredAt  time.Time       `gorm:"default:now()" json:"occurred_at"`
 }
 
 // AgentExecution matches the partitioned table.
@@ -81,7 +80,6 @@ type SystemAuditLog struct {
 type AgentExecution struct {
 	ID               uuid.UUID  `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	CreatedAt        time.Time  `gorm:"default:now();primaryKey" json:"created_at"` // Partition Key
-	OrganizationID   uuid.UUID  `gorm:"type:uuid;not null" json:"organization_id"`
 	AgentID          uuid.UUID  `gorm:"type:uuid;not null" json:"agent_id"`
 	AgentVersionID   uuid.UUID  `gorm:"type:uuid;not null" json:"agent_version_id"`
 	LLMModelID       uuid.UUID  `gorm:"type:uuid;not null" json:"llm_model_id"`

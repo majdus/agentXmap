@@ -10,7 +10,7 @@ import (
 )
 
 type ResourceService interface {
-	CreateResource(ctx context.Context, orgID uuid.UUID, typeID, name string, config json.RawMessage) (*domain.Resource, error)
+	CreateResource(ctx context.Context, typeID, name string, config json.RawMessage) (*domain.Resource, error)
 	GetResource(ctx context.Context, id uuid.UUID) (*domain.Resource, error)
 	ListAgentsWithAccess(ctx context.Context, resourceID uuid.UUID) ([]domain.Agent, error)
 }
@@ -23,7 +23,7 @@ func NewResourceService(resRepo domain.ResourceRepository) *DefaultResourceServi
 	return &DefaultResourceService{resRepo: resRepo}
 }
 
-func (s *DefaultResourceService) CreateResource(ctx context.Context, orgID uuid.UUID, typeID, name string, config json.RawMessage) (*domain.Resource, error) {
+func (s *DefaultResourceService) CreateResource(ctx context.Context, typeID, name string, config json.RawMessage) (*domain.Resource, error) {
 	if name == "" {
 		return nil, errors.New("resource name is required")
 	}
@@ -32,7 +32,6 @@ func (s *DefaultResourceService) CreateResource(ctx context.Context, orgID uuid.
 	}
 
 	res := &domain.Resource{
-		OrganizationID:    orgID,
 		TypeID:            typeID,
 		Name:              name,
 		ConnectionDetails: config,

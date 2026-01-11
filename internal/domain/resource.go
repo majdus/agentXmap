@@ -27,7 +27,6 @@ type ResourceType struct {
 
 type Resource struct {
 	ID                uuid.UUID       `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	OrganizationID    uuid.UUID       `gorm:"type:uuid;not null" json:"organization_id"`
 	TypeID            string          `gorm:"type:varchar(50);not null" json:"type_id"`
 	Name              string          `gorm:"type:varchar(255);not null" json:"name" example:"Production DB"`
 	ConnectionDetails json.RawMessage `gorm:"type:jsonb;default:'{}'" json:"connection_details" swaggertype:"string"`
@@ -35,9 +34,8 @@ type Resource struct {
 	UpdatedAt         time.Time       `gorm:"default:now()" json:"updated_at"`
 	DeletedAt         gorm.DeletedAt  `gorm:"index" json:"-"`
 
-	Organization Organization   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"organization,omitempty"`
-	Type         ResourceType   `gorm:"foreignKey:TypeID" json:"type,omitempty"`
-	Secret       ResourceSecret `gorm:"foreignKey:ResourceID" json:"-"` // Never expose secret relation directly
+	Type   ResourceType   `gorm:"foreignKey:TypeID" json:"type,omitempty"`
+	Secret ResourceSecret `gorm:"foreignKey:ResourceID" json:"-"` // Never expose secret relation directly
 }
 
 type ResourceSecret struct {

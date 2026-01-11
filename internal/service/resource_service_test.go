@@ -40,7 +40,6 @@ func (m *MockResourceRepository) ListAgentsWithAccess(ctx context.Context, resou
 
 func TestResourceService_CreateResource(t *testing.T) {
 	ctx := context.Background()
-	orgID := uuid.New()
 	config := json.RawMessage(`{"host":"localhost"}`)
 
 	t.Run("Success", func(t *testing.T) {
@@ -49,12 +48,11 @@ func TestResourceService_CreateResource(t *testing.T) {
 
 		mockRepo.On("Create", ctx, mock.AnythingOfType("*domain.Resource")).Return(nil)
 
-		res, err := service.CreateResource(ctx, orgID, "postgres-db", "Test DB", config)
+		res, err := service.CreateResource(ctx, "postgres-db", "Test DB", config)
 		assert.NoError(t, err)
 		assert.NotNil(t, res)
 		assert.Equal(t, "Test DB", res.Name)
 		assert.Equal(t, "postgres-db", res.TypeID)
-		assert.Equal(t, orgID, res.OrganizationID)
 		mockRepo.AssertExpectations(t)
 	})
 
@@ -62,7 +60,7 @@ func TestResourceService_CreateResource(t *testing.T) {
 		mockRepo := new(MockResourceRepository)
 		service := NewResourceService(mockRepo)
 
-		_, err := service.CreateResource(ctx, orgID, "postgres-db", "", config)
+		_, err := service.CreateResource(ctx, "postgres-db", "", config)
 		assert.Error(t, err)
 		assert.Equal(t, "resource name is required", err.Error())
 	})
@@ -71,7 +69,7 @@ func TestResourceService_CreateResource(t *testing.T) {
 		mockRepo := new(MockResourceRepository)
 		service := NewResourceService(mockRepo)
 
-		_, err := service.CreateResource(ctx, orgID, "", "Test DB", config)
+		_, err := service.CreateResource(ctx, "", "Test DB", config)
 		assert.Error(t, err)
 		assert.Equal(t, "resource type is required", err.Error())
 	})
@@ -82,7 +80,7 @@ func TestResourceService_CreateResource(t *testing.T) {
 
 		mockRepo.On("Create", ctx, mock.AnythingOfType("*domain.Resource")).Return(errors.New("db error"))
 
-		_, err := service.CreateResource(ctx, orgID, "postgres-db", "Test DB", config)
+		_, err := service.CreateResource(ctx, "postgres-db", "Test DB", config)
 		assert.Error(t, err)
 		assert.Equal(t, "db error", err.Error())
 		mockRepo.AssertExpectations(t)

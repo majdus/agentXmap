@@ -9,7 +9,7 @@ import (
 )
 
 type AuditService interface {
-	LogAction(ctx context.Context, orgID uuid.UUID, actorUserID *uuid.UUID, entityType string, entityID uuid.UUID, action domain.AuditAction, changes json.RawMessage, ipAddress string) error
+	LogAction(ctx context.Context, actorUserID *uuid.UUID, entityType string, entityID uuid.UUID, action domain.AuditAction, changes json.RawMessage, ipAddress string) error
 	RecordExecution(ctx context.Context, exec *domain.AgentExecution) error
 }
 
@@ -21,15 +21,14 @@ func NewAuditService(auditRepo domain.AuditRepository) *DefaultAuditService {
 	return &DefaultAuditService{auditRepo: auditRepo}
 }
 
-func (s *DefaultAuditService) LogAction(ctx context.Context, orgID uuid.UUID, actorUserID *uuid.UUID, entityType string, entityID uuid.UUID, action domain.AuditAction, changes json.RawMessage, ipAddress string) error {
+func (s *DefaultAuditService) LogAction(ctx context.Context, actorUserID *uuid.UUID, entityType string, entityID uuid.UUID, action domain.AuditAction, changes json.RawMessage, ipAddress string) error {
 	log := &domain.SystemAuditLog{
-		OrganizationID: orgID,
-		ActorUserID:    actorUserID,
-		EntityType:     entityType,
-		EntityID:       entityID,
-		Action:         action,
-		Changes:        changes,
-		IPAddress:      ipAddress,
+		ActorUserID: actorUserID,
+		EntityType:  entityType,
+		EntityID:    entityID,
+		Action:      action,
+		Changes:     changes,
+		IPAddress:   ipAddress,
 	}
 	return s.auditRepo.CreateLog(ctx, log)
 }
@@ -37,10 +36,5 @@ func (s *DefaultAuditService) LogAction(ctx context.Context, orgID uuid.UUID, ac
 func (s *DefaultAuditService) RecordExecution(ctx context.Context, exec *domain.AgentExecution) error {
 	// Here we could add logic to anonymize or calculate missing metrics if needed.
 	// For now, it's a direct record.
-	if exec.OrganizationID == uuid.Nil {
-		// Just a safeguard, though caller should provide it.
-		// Maybe error out? Or fallback?
-		// Stick to direct persistence.
-	}
 	return s.auditRepo.CreateExecution(ctx, exec)
 }

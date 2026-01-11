@@ -34,13 +34,13 @@ func (m *MockAgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*domai
 	return args.Get(0).(*domain.Agent), args.Error(1)
 }
 
-func (m *MockAgentRepository) ListByOrg(ctx context.Context, orgID uuid.UUID) ([]domain.Agent, error) {
-	args := m.Called(ctx, orgID)
+func (m *MockAgentRepository) List(ctx context.Context) ([]domain.Agent, error) {
+	args := m.Called(ctx)
 	return args.Get(0).([]domain.Agent), args.Error(1)
 }
 
-func (m *MockAgentRepository) ListByStatus(ctx context.Context, orgID uuid.UUID, status domain.AgentStatus) ([]domain.Agent, error) {
-	args := m.Called(ctx, orgID, status)
+func (m *MockAgentRepository) ListByStatus(ctx context.Context, status domain.AgentStatus) ([]domain.Agent, error) {
+	args := m.Called(ctx, status)
 	return args.Get(0).([]domain.Agent), args.Error(1)
 }
 
@@ -99,7 +99,6 @@ func TestAgentService_CreateAgent(t *testing.T) {
 	mockRepo := new(MockAgentRepository)
 	service := NewAgentService(mockRepo)
 	ctx := context.Background()
-	orgID := uuid.New()
 	userID := uuid.New()
 
 	t.Run("Success", func(t *testing.T) {
@@ -107,14 +106,14 @@ func TestAgentService_CreateAgent(t *testing.T) {
 		config := json.RawMessage(`{"model": "gpt-4"}`)
 
 		mockRepo.On("Create", ctx, mock.MatchedBy(func(a *domain.Agent) bool {
-			return a.Name == name && a.OrganizationID == orgID
+			return a.Name == name
 		})).Return(nil)
 
 		mockRepo.On("CreateVersion", ctx, mock.MatchedBy(func(v *domain.AgentVersion) bool {
 			return v.VersionNumber == 1
 		})).Return(nil)
 
-		agent, err := service.CreateAgent(ctx, orgID, userID, name, config)
+		agent, err := service.CreateAgent(ctx, userID, name, config)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, agent)
@@ -123,7 +122,7 @@ func TestAgentService_CreateAgent(t *testing.T) {
 	})
 
 	t.Run("Empty Name", func(t *testing.T) {
-		_, err := service.CreateAgent(ctx, orgID, userID, "", nil)
+		_, err := service.CreateAgent(ctx, userID, "", nil)
 		assert.Error(t, err)
 	})
 
@@ -136,7 +135,7 @@ func TestAgentService_CreateAgent(t *testing.T) {
 		// Simulate duplicate key error from DB
 		mockRepo.On("Create", ctx, mock.Anything).Return(errors.New("duplicate key value violates unique constraint"))
 
-		_, err := service.CreateAgent(ctx, orgID, userID, name, config)
+		_, err := service.CreateAgent(ctx, userID, name, config)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "duplicate key")
 	})
@@ -144,7 +143,6 @@ func TestAgentService_CreateAgent(t *testing.T) {
 
 func TestAgentService_UpdateAgent(t *testing.T) {
 	ctx := context.Background()
-	orgID := uuid.New()
 	userID := uuid.New()
 	agentID := uuid.New()
 
@@ -154,10 +152,9 @@ func TestAgentService_UpdateAgent(t *testing.T) {
 
 		// Existing agent
 		existingAgent := &domain.Agent{
-			ID:             agentID,
-			OrganizationID: orgID,
-			Name:           "Old Name",
-			Configuration:  json.RawMessage(`{"model": "gpt-3.5"}`),
+			ID:            agentID,
+			Name:          "Old Name",
+			Configuration: json.RawMessage(`{"model": "gpt-3.5"}`),
 			Versions: []domain.AgentVersion{
 				{VersionNumber: 1},
 			},
@@ -190,10 +187,9 @@ func TestAgentService_UpdateAgent(t *testing.T) {
 		// Existing agent
 		config := json.RawMessage(`{"model": "gpt-4"}`)
 		existingAgent := &domain.Agent{
-			ID:             agentID,
-			OrganizationID: orgID,
-			Name:           "Old Name",
-			Configuration:  config,
+			ID:            agentID,
+			Name:          "Old Name",
+			Configuration: config,
 			Versions: []domain.AgentVersion{
 				{VersionNumber: 1},
 			},
@@ -408,7 +404,6 @@ func TestAgentService_ListAssignedAgents(t *testing.T) {
 
 func TestAgentService_ListAgentsByStatus(t *testing.T) {
 	ctx := context.Background()
-	orgID := uuid.New()
 
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockAgentRepository)
@@ -417,9 +412,9 @@ func TestAgentService_ListAgentsByStatus(t *testing.T) {
 		expectedAgents := []domain.Agent{
 			{Name: "Active Agent", Status: domain.AgentStatusActive},
 		}
-		mockRepo.On("ListByStatus", ctx, orgID, domain.AgentStatusActive).Return(expectedAgents, nil)
+		mockRepo.On("ListByStatus", ctx, domain.AgentStatusActive).Return(expectedAgents, nil)
 
-		agents, err := service.ListAgentsByStatus(ctx, orgID, domain.AgentStatusActive)
+		agents, err := service.ListAgentsByStatus(ctx, domain.AgentStatusActive)
 		assert.NoError(t, err)
 		assert.Len(t, agents, 1)
 		mockRepo.AssertExpectations(t)
@@ -428,7 +423,6 @@ func TestAgentService_ListAgentsByStatus(t *testing.T) {
 
 func TestAgentService_GetActiveMonthlyCost(t *testing.T) {
 	ctx := context.Background()
-	orgID := uuid.New()
 
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockAgentRepository)
@@ -440,9 +434,9 @@ func TestAgentService_GetActiveMonthlyCost(t *testing.T) {
 			// OneTime should be ignored
 			{Name: "OneTime Agent", Status: domain.AgentStatusActive, BillingCycle: domain.BillingCycleOneTime, CostAmount: 500.0},
 		}
-		mockRepo.On("ListByStatus", ctx, orgID, domain.AgentStatusActive).Return(activeAgents, nil)
+		mockRepo.On("ListByStatus", ctx, domain.AgentStatusActive).Return(activeAgents, nil)
 
-		cost, err := service.GetActiveMonthlyCost(ctx, orgID)
+		cost, err := service.GetActiveMonthlyCost(ctx)
 		assert.NoError(t, err)
 		// 100 (Monthly) + 1200/12 (Yearly=100) + 0 (OneTime) = 200
 		assert.Equal(t, 200.0, cost)

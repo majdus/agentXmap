@@ -35,21 +35,11 @@ CREATE TYPE audit_action AS ENUM ('create', 'update', 'delete', 'login', 'export
 CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'expired', 'revoked');
 
 -- ============================================================
--- 2. CORE: IDENTITY & TENANCY
+-- 2. CORE: IDENTITY
 -- ============================================================
-
-CREATE TABLE organizations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    deleted_at TIMESTAMP
-);
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role user_role NOT NULL DEFAULT 'user',
@@ -65,7 +55,6 @@ CREATE TRIGGER update_users_modtime BEFORE UPDATE ON users FOR EACH ROW EXECUTE 
 
 CREATE TABLE invitations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     invitor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     email VARCHAR(255) NOT NULL,
     token VARCHAR(255) NOT NULL UNIQUE,
@@ -83,7 +72,6 @@ CREATE TRIGGER update_invitations_modtime BEFORE UPDATE ON invitations FOR EACH 
 
 CREATE TABLE agents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     status agent_status DEFAULT 'active',
 
@@ -214,7 +202,6 @@ CREATE TABLE resource_types (
 
 CREATE TABLE resources (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     type_id VARCHAR(50) NOT NULL REFERENCES resource_types(id) ON UPDATE CASCADE,
     name VARCHAR(255) NOT NULL,
     connection_details JSONB DEFAULT '{}',
@@ -294,7 +281,6 @@ CREATE TABLE application_certifications (
 
 CREATE TABLE system_audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     actor_user_id UUID, -- Nullable if system action
     entity_type VARCHAR(50) NOT NULL,
     entity_id UUID NOT NULL,
@@ -303,7 +289,7 @@ CREATE TABLE system_audit_logs (
     ip_address VARCHAR(45),
     occurred_at TIMESTAMP DEFAULT NOW()
 );
-CREATE INDEX idx_audit_org_date ON system_audit_logs(organization_id, occurred_at);
+CREATE INDEX idx_audit_date ON system_audit_logs(occurred_at);
 CREATE INDEX idx_audit_entity ON system_audit_logs(entity_id);
 
 -- Partitioned Table for Executions
@@ -312,7 +298,6 @@ CREATE TABLE agent_executions (
     id UUID DEFAULT gen_random_uuid(),
     created_at TIMESTAMP DEFAULT NOW(), -- Partition Key
 
-    organization_id UUID NOT NULL, -- Loose reference for perf
     agent_id UUID NOT NULL, -- Loose reference to keep data even if agent deleted? No, let's keep it safe.
     agent_version_id UUID NOT NULL,
     llm_model_id UUID NOT NULL,
@@ -340,7 +325,7 @@ CREATE TABLE agent_executions_default PARTITION OF agent_executions
 
 -- Indexes on the parent table (propagated to partitions)
 CREATE INDEX idx_executions_agent ON agent_executions(agent_id);
-CREATE INDEX idx_executions_org_date ON agent_executions(organization_id, created_at);
+CREATE INDEX idx_executions_date ON agent_executions(created_at);
 
 
 COMMIT;

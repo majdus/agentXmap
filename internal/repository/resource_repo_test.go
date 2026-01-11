@@ -100,10 +100,10 @@ func TestResourceRepository_Create(t *testing.T) {
 			name:  "Success",
 			input: res,
 			mock: func() {
-				// GORM behavior: 7 args seen in error.
+				// GORM behavior: 6 args seen in error (ID, TypeID, Name, ConnectionDetails, CreatedAt, UpdatedAt)
 				mock.ExpectBegin()
 				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "resources"`)).
-					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()). // 7 args
+					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()). // 6 args
 					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(res.ID))
 				mock.ExpectCommit()
 			},

@@ -27,24 +27,22 @@ func TestAuditRepository_CreateLog(t *testing.T) {
 
 	repo := NewAuditRepository(gormDB)
 	ctx := context.Background()
-	orgID := uuid.New()
 	userID := uuid.New()
 	entityID := uuid.New()
 
 	t.Run("Success", func(t *testing.T) {
 		log := &domain.SystemAuditLog{
-			OrganizationID: orgID,
-			ActorUserID:    &userID,
-			EntityType:     "agent",
-			EntityID:       entityID,
-			Action:         domain.AuditActionCreate,
-			Changes:        json.RawMessage(`{}`),
-			IPAddress:      "127.0.0.1",
+			ActorUserID: &userID,
+			EntityType:  "agent",
+			EntityID:    entityID,
+			Action:      domain.AuditActionCreate,
+			Changes:     json.RawMessage(`{}`),
+			IPAddress:   "127.0.0.1",
 		}
 
 		mock.ExpectBegin()
 		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "system_audit_logs"`)).
-			WithArgs(orgID, userID, "agent", entityID, "create", log.Changes, "127.0.0.1").
+			WithArgs(userID, "agent", entityID, "create", log.Changes, "127.0.0.1").
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
 		mock.ExpectCommit()
 
@@ -66,14 +64,12 @@ func TestAuditRepository_CreateExecution(t *testing.T) {
 
 	repo := NewAuditRepository(gormDB)
 	ctx := context.Background()
-	orgID := uuid.New()
 	agentID := uuid.New()
 	versionID := uuid.New()
 	modelID := uuid.New()
 
 	t.Run("Success", func(t *testing.T) {
 		exec := &domain.AgentExecution{
-			OrganizationID:   orgID,
 			AgentID:          agentID,
 			AgentVersionID:   versionID,
 			LLMModelID:       modelID,
@@ -89,7 +85,7 @@ func TestAuditRepository_CreateExecution(t *testing.T) {
 		mock.ExpectBegin()
 		// GORM with Postgres uses Query for INSERT ... RETURNING
 		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "agent_executions"`)).
-			WithArgs(orgID, agentID, versionID, modelID, nil, nil, "completed", 100, 50, 50, false, 1.0, sqlmock.AnyArg()).
+			WithArgs(agentID, versionID, modelID, nil, nil, "completed", 100, 50, 50, false, 1.0, sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(uuid.New(), time.Now()))
 		mock.ExpectCommit()
 

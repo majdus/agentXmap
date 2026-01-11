@@ -24,7 +24,6 @@ func (r *invitationRepository) Create(ctx context.Context, invitation *domain.In
 func (r *invitationRepository) GetByToken(ctx context.Context, token string) (*domain.Invitation, error) {
 	var invitation domain.Invitation
 	if err := r.db.WithContext(ctx).
-		Preload("Organization").
 		Preload("Invitor").
 		First(&invitation, "token = ?", token).Error; err != nil {
 		return nil, err

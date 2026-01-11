@@ -49,34 +49,6 @@ func (m *MockUserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return args.Error(0)
 }
 
-type MockOrganizationRepository struct {
-	mock.Mock
-}
-
-func (m *MockOrganizationRepository) Create(ctx context.Context, org *domain.Organization) error {
-	args := m.Called(ctx, org)
-	if args.Error(0) == nil {
-		org.ID = uuid.New() // Simulate DB generating ID
-	}
-	return args.Error(0)
-}
-
-func (m *MockOrganizationRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Organization, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domain.Organization), args.Error(1)
-}
-
-func (m *MockOrganizationRepository) GetBySlug(ctx context.Context, slug string) (*domain.Organization, error) {
-	args := m.Called(ctx, slug)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*domain.Organization), args.Error(1)
-}
-
 type MockInvitationRepository struct {
 	mock.Mock
 }
@@ -103,30 +75,29 @@ func (m *MockInvitationRepository) Update(ctx context.Context, invitation *domai
 
 func TestIdentityService_SignUp(t *testing.T) {
 	mockUserRepo := new(MockUserRepository)
-	mockOrgRepo := new(MockOrganizationRepository)
 	mockInvRepo := new(MockInvitationRepository)
-	service := NewIdentityService(mockUserRepo, mockOrgRepo, mockInvRepo)
+	service := NewIdentityService(mockUserRepo, mockInvRepo)
 
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
 		mockUserRepo.On("GetByEmail", ctx, "admin@test.com").Return(nil, errors.New("not found")).Once()
-		mockOrgRepo.On("Create", ctx, mock.AnythingOfType("*domain.Organization")).Return(nil).Once()
 		mockUserRepo.On("Create", ctx, mock.AnythingOfType("*domain.User")).Return(nil).Once()
 
-		user, err := service.SignUp(ctx, "Test Org", "admin@test.com", "password123")
+		user, err := service.SignUp(ctx, "admin@test.com", "password123")
 		assert.NoError(t, err)
 		assert.NotNil(t, user)
 		assert.Equal(t, "admin@test.com", user.Email)
+		// Role is technically Admin in implementation, though logic might need adjustment if no Org.
+		// For now we assume first user/SignUp is Admin.
 		assert.Equal(t, domain.UserRoleAdmin, user.Role)
-		assert.Equal(t, "Test Org", user.Organization.Name)
 	})
 
 	t.Run("UserAlreadyExists", func(t *testing.T) {
 		existingUser := &domain.User{Email: "admin@test.com"}
 		mockUserRepo.On("GetByEmail", ctx, "admin@test.com").Return(existingUser, nil).Once()
 
-		user, err := service.SignUp(ctx, "Test Org", "admin@test.com", "password123")
+		user, err := service.SignUp(ctx, "admin@test.com", "password123")
 		assert.Error(t, err)
 		assert.Nil(t, user)
 		assert.Equal(t, "user already exists", err.Error())
@@ -135,19 +106,16 @@ func TestIdentityService_SignUp(t *testing.T) {
 
 func TestIdentityService_InviteUsers(t *testing.T) {
 	mockUserRepo := new(MockUserRepository)
-	mockOrgRepo := new(MockOrganizationRepository)
 	mockInvRepo := new(MockInvitationRepository)
-	service := NewIdentityService(mockUserRepo, mockOrgRepo, mockInvRepo)
+	service := NewIdentityService(mockUserRepo, mockInvRepo)
 
 	ctx := context.Background()
 	invitorID := uuid.New()
-	orgID := uuid.New()
 
 	t.Run("Success", func(t *testing.T) {
 		invitor := &domain.User{
-			ID:             invitorID,
-			OrganizationID: orgID,
-			Role:           domain.UserRoleAdmin,
+			ID:   invitorID,
+			Role: domain.UserRoleAdmin,
 		}
 
 		mockUserRepo.On("GetByID", ctx, invitorID).Return(invitor, nil).Once()
@@ -164,9 +132,8 @@ func TestIdentityService_InviteUsers(t *testing.T) {
 
 	t.Run("InsufficientPermissions", func(t *testing.T) {
 		invitor := &domain.User{
-			ID:             invitorID,
-			OrganizationID: orgID,
-			Role:           domain.UserRoleUser, // Normal user cannot invite
+			ID:   invitorID,
+			Role: domain.UserRoleUser, // Normal user cannot invite
 		}
 
 		mockUserRepo.On("GetByID", ctx, invitorID).Return(invitor, nil).Once()
@@ -188,9 +155,8 @@ func TestIdentityService_InviteUsers(t *testing.T) {
 
 func TestIdentityService_AcceptInvitation(t *testing.T) {
 	mockUserRepo := new(MockUserRepository)
-	mockOrgRepo := new(MockOrganizationRepository)
 	mockInvRepo := new(MockInvitationRepository)
-	service := NewIdentityService(mockUserRepo, mockOrgRepo, mockInvRepo)
+	service := NewIdentityService(mockUserRepo, mockInvRepo)
 
 	ctx := context.Background()
 	token := "valid-token"

@@ -26,7 +26,7 @@ func (r *agentRepository) Create(ctx context.Context, agent *domain.Agent) error
 func (r *agentRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Agent, error) {
 	var agent domain.Agent
 	// Preload minimal relations
-	if err := r.db.WithContext(ctx).Preload("Versions").Preload("Organization").First(&agent, "id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Versions").First(&agent, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -35,17 +35,17 @@ func (r *agentRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Ag
 	return &agent, nil
 }
 
-func (r *agentRepository) ListByOrg(ctx context.Context, orgID uuid.UUID) ([]domain.Agent, error) {
+func (r *agentRepository) List(ctx context.Context) ([]domain.Agent, error) {
 	var agents []domain.Agent
-	if err := r.db.WithContext(ctx).Where("organization_id = ?", orgID).Find(&agents).Error; err != nil {
+	if err := r.db.WithContext(ctx).Find(&agents).Error; err != nil {
 		return nil, err
 	}
 	return agents, nil
 }
 
-func (r *agentRepository) ListByStatus(ctx context.Context, orgID uuid.UUID, status domain.AgentStatus) ([]domain.Agent, error) {
+func (r *agentRepository) ListByStatus(ctx context.Context, status domain.AgentStatus) ([]domain.Agent, error) {
 	var agents []domain.Agent
-	if err := r.db.WithContext(ctx).Where("organization_id = ? AND status = ?", orgID, status).Find(&agents).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("status = ?", status).Find(&agents).Error; err != nil {
 		return nil, err
 	}
 	return agents, nil

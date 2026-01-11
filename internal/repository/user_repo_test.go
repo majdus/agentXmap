@@ -41,13 +41,12 @@ func TestUserRepository_Create(t *testing.T) {
 
 	ctx := context.TODO()
 	user := &domain.User{
-		ID:             uuid.New(),
-		OrganizationID: uuid.New(),
-		Email:          "test@example.com",
-		PasswordHash:   "hashedpassword",
-		Role:           domain.UserRoleUser,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		ID:           uuid.New(),
+		Email:        "test@example.com",
+		PasswordHash: "hashedpassword",
+		Role:         domain.UserRoleUser,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	tests := []struct {
@@ -62,8 +61,10 @@ func TestUserRepository_Create(t *testing.T) {
 			mock: func() {
 				mock.ExpectBegin()
 				// GORM + Postgres = Query with RETURNING
+				// Args: id, email, password_hash, role, first_name, last_name, created_at, updated_at, deleted_at (9 args?)
+				// Let's use AnyArg to be safe, count depends on struct fields
 				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "users"`)).
-					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(user.ID))
 				mock.ExpectCommit()
 			},
@@ -103,7 +104,6 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 
 	email := "test@example.com"
 	userID := uuid.New()
-	orgID := uuid.New()
 
 	tests := []struct {
 		name    string
@@ -116,19 +116,13 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 			name:  "Found",
 			email: email,
 			mock: func() {
-				rows := sqlmock.NewRows([]string{"id", "email", "organization_id", "password_hash", "role", "created_at", "updated_at"}).
-					AddRow(userID, email, orgID, "hash", "user", time.Now(), time.Now())
+				rows := sqlmock.NewRows([]string{"id", "email", "password_hash", "role", "created_at", "updated_at"}).
+					AddRow(userID, email, "hash", "user", time.Now(), time.Now())
 
 				// 1. Query User
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE email = $1`)).
 					WithArgs(email, 1).
 					WillReturnRows(rows)
-
-				// 2. Preload Org
-				orgRows := sqlmock.NewRows([]string{"id", "name"}).AddRow(orgID, "Test Org")
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE "organizations"."id" = $1`)).
-					WithArgs(orgID).
-					WillReturnRows(orgRows)
 			},
 			want:    &domain.User{ID: userID, Email: email},
 			wantErr: false,
@@ -172,7 +166,6 @@ func TestUserRepository_GetByID(t *testing.T) {
 	ctx := context.TODO()
 
 	id := uuid.New()
-	orgID := uuid.New()
 
 	tests := []struct {
 		name    string
@@ -185,16 +178,12 @@ func TestUserRepository_GetByID(t *testing.T) {
 			name: "Found",
 			id:   id,
 			mock: func() {
-				rows := sqlmock.NewRows([]string{"id", "email", "organization_id", "password_hash", "role", "created_at", "updated_at"}).
-					AddRow(id, "test@example.com", orgID, "hash", "user", time.Now(), time.Now())
+				rows := sqlmock.NewRows([]string{"id", "email", "password_hash", "role", "created_at", "updated_at"}).
+					AddRow(id, "test@example.com", "hash", "user", time.Now(), time.Now())
 
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1`)).
 					WithArgs(id, 1).
 					WillReturnRows(rows)
-
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE "organizations"."id" = $1`)).
-					WithArgs(orgID).
-					WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(orgID, "Org"))
 			},
 			want:    &domain.User{ID: id, Email: "test@example.com"},
 			wantErr: false,

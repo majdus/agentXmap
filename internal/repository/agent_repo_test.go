@@ -21,12 +21,11 @@ func TestAgentRepository_Create(t *testing.T) {
 	ctx := context.TODO()
 
 	agent := &domain.Agent{
-		ID:             uuid.New(),
-		OrganizationID: uuid.New(),
-		Name:           "Test Agent",
-		Status:         domain.AgentStatusActive,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		ID:        uuid.New(),
+		Name:      "Test Agent",
+		Status:    domain.AgentStatusActive,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	tests := []struct {
@@ -40,9 +39,13 @@ func TestAgentRepository_Create(t *testing.T) {
 			input: agent,
 			mock: func() {
 				mock.ExpectBegin()
-				// GORM inserted 12 args in the failed log.
+				// GORM inserted 12 args in the failed log. Removed OrgID -> 11 args?
+				// ID, Name, Status, Configuration, CreatedBy, UpdatedBy, CostAmount, CostCurrency, BillingCycle, CreatedAt, UpdatedAt, DeletedAt
+				// 12 fields total?
+				// Before it had OrgID. Now removed.
+				// Let's rely on sqlmock.AnyArg for now.
 				mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "agents"`)).
-					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+					WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(agent.ID))
 				mock.ExpectCommit()
 			},
@@ -82,7 +85,6 @@ func TestAgentRepository_GetByID(t *testing.T) {
 	ctx := context.TODO()
 
 	id := uuid.New()
-	orgID := uuid.New()
 
 	tests := []struct {
 		name    string
@@ -96,19 +98,14 @@ func TestAgentRepository_GetByID(t *testing.T) {
 			id:   id,
 			mock: func() {
 				// 1. Main Query
-				rows := sqlmock.NewRows([]string{"id", "name", "organization_id", "status", "cost_amount", "cost_currency", "billing_cycle", "configuration"}).
-					AddRow(id, "Agent 007", orgID, "active", 0.0, "EUR", "monthly", []byte("{}"))
+				rows := sqlmock.NewRows([]string{"id", "name", "status", "cost_amount", "cost_currency", "billing_cycle", "configuration"}).
+					AddRow(id, "Agent 007", "active", 0.0, "EUR", "monthly", []byte("{}"))
 
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "agents" WHERE id = $1`)).
 					WithArgs(id, 1).
 					WillReturnRows(rows)
 
 				// 2. Preloads
-				// Organization is usually fetched if FK is present.
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE "organizations"."id" = $1`)).
-					WithArgs(orgID).
-					WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(orgID, "Org"))
-
 				// Versions
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "agent_versions" WHERE "agent_versions"."agent_id" = $1`)).
 					WithArgs(id).
@@ -152,30 +149,25 @@ func TestAgentRepository_GetByID(t *testing.T) {
 	}
 }
 
-func TestAgentRepository_ListByOrg(t *testing.T) {
+func TestAgentRepository_List(t *testing.T) {
 	db, mock := setupMockDB(t)
 	repo := NewAgentRepository(db)
 	ctx := context.TODO()
 
-	orgID := uuid.New()
-
 	tests := []struct {
 		name    string
-		orgID   uuid.UUID
 		mock    func()
 		wantLen int
 		wantErr bool
 	}{
 		{
-			name:  "Success",
-			orgID: orgID,
+			name: "Success",
 			mock: func() {
-				rows := sqlmock.NewRows([]string{"id", "name", "organization_id", "status"}).
-					AddRow(uuid.New(), "Agent 1", orgID, "active").
-					AddRow(uuid.New(), "Agent 2", orgID, "inactive")
+				rows := sqlmock.NewRows([]string{"id", "name", "status"}).
+					AddRow(uuid.New(), "Agent 1", "active").
+					AddRow(uuid.New(), "Agent 2", "inactive")
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "agents" WHERE organization_id = $1`)).
-					WithArgs(orgID).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "agents"`)).
 					WillReturnRows(rows)
 			},
 			wantLen: 2,
@@ -186,7 +178,7 @@ func TestAgentRepository_ListByOrg(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mock()
-			got, err := repo.ListByOrg(ctx, tt.orgID)
+			got, err := repo.List(ctx)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {

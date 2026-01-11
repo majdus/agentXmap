@@ -30,7 +30,6 @@ func (m *MockAuditRepository) CreateExecution(ctx context.Context, exec *domain.
 
 func TestAuditService_LogAction(t *testing.T) {
 	ctx := context.Background()
-	orgID := uuid.New()
 	userID := uuid.New()
 	entityID := uuid.New()
 
@@ -42,7 +41,7 @@ func TestAuditService_LogAction(t *testing.T) {
 			return l.Action == domain.AuditActionCreate && l.EntityType == "agent"
 		})).Return(nil)
 
-		err := service.LogAction(ctx, orgID, &userID, "agent", entityID, domain.AuditActionCreate, json.RawMessage(`{}`), "127.0.0.1")
+		err := service.LogAction(ctx, &userID, "agent", entityID, domain.AuditActionCreate, json.RawMessage(`{}`), "127.0.0.1")
 		assert.NoError(t, err)
 		mockRepo.AssertExpectations(t)
 	})
@@ -53,7 +52,7 @@ func TestAuditService_LogAction(t *testing.T) {
 
 		mockRepo.On("CreateLog", ctx, mock.Anything).Return(errors.New("db error"))
 
-		err := service.LogAction(ctx, orgID, &userID, "agent", entityID, domain.AuditActionCreate, nil, "")
+		err := service.LogAction(ctx, &userID, "agent", entityID, domain.AuditActionCreate, nil, "")
 		assert.Error(t, err)
 		if err != nil {
 			assert.Equal(t, "db error", err.Error())
@@ -65,10 +64,9 @@ func TestAuditService_RecordExecution(t *testing.T) {
 	ctx := context.Background()
 	mockRepo := new(MockAuditRepository)
 	service := NewAuditService(mockRepo)
-	orgID := uuid.New()
 
 	t.Run("Success", func(t *testing.T) {
-		exec := &domain.AgentExecution{OrganizationID: orgID, CreatedAt: time.Now()}
+		exec := &domain.AgentExecution{CreatedAt: time.Now()}
 		mockRepo.On("CreateExecution", ctx, exec).Return(nil)
 
 		err := service.RecordExecution(ctx, exec)

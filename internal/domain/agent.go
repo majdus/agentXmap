@@ -25,24 +25,23 @@ const (
 
 // Agent represents an AI Agent.
 type Agent struct {
-	ID             uuid.UUID       `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	OrganizationID uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_org_agent_name" json:"organization_id"`
-	Name           string          `gorm:"type:varchar(255);not null;uniqueIndex:idx_org_agent_name" json:"name"`
-	Status         AgentStatus     `gorm:"type:agent_status;default:'active'" json:"status"`
-	CostAmount     float64         `gorm:"type:decimal(10,2);default:0.00" json:"cost_amount"`
-	CostCurrency   string          `gorm:"type:varchar(3);default:'EUR'" json:"cost_currency"`
-	BillingCycle   BillingCycle    `gorm:"type:billing_cycle;default:'monthly'" json:"billing_cycle"`
-	Configuration  json.RawMessage `gorm:"type:jsonb;default:'{}'" json:"configuration" swaggertype:"string" example:"{\"model\": \"gpt-4\"}"`
-	CreatedBy      *uuid.UUID      `gorm:"type:uuid" json:"created_by,omitempty"`
-	UpdatedBy      *uuid.UUID      `gorm:"type:uuid" json:"updated_by,omitempty"`
-	CreatedAt      time.Time       `gorm:"default:now()" json:"created_at"`
-	UpdatedAt      time.Time       `gorm:"default:now()" json:"updated_at"`
-	DeletedAt      gorm.DeletedAt  `gorm:"index" json:"-"`
+	ID            uuid.UUID       `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+	Name          string          `gorm:"type:varchar(255);not null;unique" json:"name"`
+	Status        AgentStatus     `gorm:"type:agent_status;default:'active'" json:"status"`
+	CostAmount    float64         `gorm:"type:decimal(10,2);default:0.00" json:"cost_amount"`
+	CostCurrency  string          `gorm:"type:varchar(3);default:'EUR'" json:"cost_currency"`
+	BillingCycle  BillingCycle    `gorm:"type:billing_cycle;default:'monthly'" json:"billing_cycle"`
+	Configuration json.RawMessage `gorm:"type:jsonb;default:'{}'" json:"configuration" swaggertype:"string" example:"{\"model\": \"gpt-4\"}"`
+	CreatedBy     *uuid.UUID      `gorm:"type:uuid" json:"created_by,omitempty"`
+	UpdatedBy     *uuid.UUID      `gorm:"type:uuid" json:"updated_by,omitempty"`
+	CreatedAt     time.Time       `gorm:"default:now()" json:"created_at"`
+	UpdatedAt     time.Time       `gorm:"default:now()" json:"updated_at"`
+	DeletedAt     gorm.DeletedAt  `gorm:"index" json:"-"`
 
 	// Relations
-	Organization Organization      `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"organization,omitempty"`
-	Versions     []AgentVersion    `json:"versions,omitempty"`
-	Assignments  []AgentAssignment `json:"assignments,omitempty"`
+
+	Versions    []AgentVersion    `json:"versions,omitempty"`
+	Assignments []AgentAssignment `json:"assignments,omitempty"`
 }
 
 // AgentVersion represents an immutable snapshot of an agent's configuration for compliance (EU AI Act).

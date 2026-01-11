@@ -16,7 +16,7 @@ import (
 
 // IdentityService defines the interface for user identity management.
 type IdentityService interface {
-	SignUp(ctx context.Context, orgName, email, password string) (*domain.User, error)
+	SignUp(ctx context.Context, email, password string) (*domain.User, error)
 	Login(ctx context.Context, email, password string) (*domain.User, error)
 	InviteUsers(ctx context.Context, invitorID uuid.UUID, emails []string, role domain.UserRole) ([]*domain.Invitation, error)
 	AcceptInvitation(ctx context.Context, token, password, firstName, lastName string) (*domain.User, error)
@@ -24,7 +24,6 @@ type IdentityService interface {
 
 type DefaultIdentityService struct {
 	userRepo       domain.UserRepository
-	orgRepo        domain.OrganizationRepository
 	invitationRepo domain.InvitationRepository
 	// In a real app we would have a PasswordHasher and EmailService interface here
 }
@@ -32,12 +31,10 @@ type DefaultIdentityService struct {
 // NewIdentityService creates a new instance of DefaultIdentityService.
 func NewIdentityService(
 	userRepo domain.UserRepository,
-	orgRepo domain.OrganizationRepository,
 	invitationRepo domain.InvitationRepository,
 ) *DefaultIdentityService {
 	return &DefaultIdentityService{
 		userRepo:       userRepo,
-		orgRepo:        orgRepo,
 		invitationRepo: invitationRepo,
 	}
 }
@@ -62,7 +59,7 @@ func generateToken() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func (s *DefaultIdentityService) SignUp(ctx context.Context, orgName, email, password string) (*domain.User, error) {
+func (s *DefaultIdentityService) SignUp(ctx context.Context, email, password string) (*domain.User, error) {
 	// TODO: Add proper validation (email format, password strength)
 	// TODO: Check if email already exists? (Repo will throw error, but better to check)
 	existing, _ := s.userRepo.GetByEmail(ctx, email)
@@ -75,37 +72,16 @@ func (s *DefaultIdentityService) SignUp(ctx context.Context, orgName, email, pas
 		return nil, err
 	}
 
-	// Slug generation (simplistic for now)
-	slug := Slugify(orgName)
-
-	// We should run this in a transaction.
-	// Gorm doesn't easily expose "RunTransaction" on Repos unless we share the DB instance or pass it around.
-	// For now we do it sequentially. If Org creation succeeds but User fails, we have an orphan Org.
-	// Ideally Repos should accept a DB/Tx interface.
-
-	org := &domain.Organization{
-		Name: orgName,
-		Slug: slug,
-	}
-
-	if err := s.orgRepo.Create(ctx, org); err != nil {
-		return nil, err
-	}
-
 	user := &domain.User{
-		OrganizationID: org.ID,
-		Email:          email,
-		PasswordHash:   hashedPassword,
-		Role:           domain.UserRoleAdmin, // First user is Admin
+		Email:        email,
+		PasswordHash: hashedPassword,
+		Role:         domain.UserRoleAdmin, // First user is Admin
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
-		// Rollback Org?
-		// s.orgRepo.Delete(ctx, org.ID)
 		return nil, err
 	}
 
-	user.Organization = *org
 	return user, nil
 }
 
@@ -149,13 +125,12 @@ func (s *DefaultIdentityService) InviteUsers(ctx context.Context, invitorID uuid
 		}
 
 		invitation := &domain.Invitation{
-			OrganizationID: invitor.OrganizationID,
-			InvitorID:      invitor.ID,
-			Email:          email,
-			Token:          token,
-			Role:           role,
-			Status:         domain.InvitationStatusPending,
-			ExpiresAt:      time.Now().Add(48 * time.Hour),
+			InvitorID: invitor.ID,
+			Email:     email,
+			Token:     token,
+			Role:      role,
+			Status:    domain.InvitationStatusPending,
+			ExpiresAt: time.Now().Add(48 * time.Hour),
 		}
 
 		if err := s.invitationRepo.Create(ctx, invitation); err != nil {
@@ -189,12 +164,11 @@ func (s *DefaultIdentityService) AcceptInvitation(ctx context.Context, token, pa
 	}
 
 	user := &domain.User{
-		OrganizationID: invitation.OrganizationID,
-		Email:          invitation.Email,
-		PasswordHash:   hashedPassword,
-		Role:           invitation.Role,
-		FirstName:      firstName,
-		LastName:       lastName,
+		Email:        invitation.Email,
+		PasswordHash: hashedPassword,
+		Role:         invitation.Role,
+		FirstName:    firstName,
+		LastName:     lastName,
 	}
 
 	// This should also be transactional

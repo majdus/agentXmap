@@ -27,19 +27,17 @@ func TestInvitationRepository_Create(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		invitation := &domain.Invitation{
-			OrganizationID: uuid.New(),
-			InvitorID:      uuid.New(),
-			Email:          "test@example.com",
-			Token:          "secure-token",
-			Role:           domain.UserRoleUser,
-			Status:         domain.InvitationStatusPending,
-			ExpiresAt:      time.Now().Add(24 * time.Hour),
+			InvitorID: uuid.New(),
+			Email:     "test@example.com",
+			Token:     "secure-token",
+			Role:      domain.UserRoleUser,
+			Status:    domain.InvitationStatusPending,
+			ExpiresAt: time.Now().Add(24 * time.Hour),
 		}
 
 		mock.ExpectBegin()
 		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "invitations"`)).
 			WithArgs(
-				invitation.OrganizationID,
 				invitation.InvitorID,
 				invitation.Email,
 				invitation.Token,
@@ -70,20 +68,17 @@ func TestInvitationRepository_GetByToken(t *testing.T) {
 		invitationID := uuid.New()
 
 		rows := sqlmock.NewRows([]string{
-			"id", "organization_id", "invitor_id", "email", "token", "role", "status", "expires_at", "created_at", "updated_at",
+			"id", "invitor_id", "email", "token", "role", "status", "expires_at", "created_at", "updated_at",
 		}).AddRow(
-			invitationID, uuid.New(), uuid.New(), "test@example.com", token, "user", "pending", time.Now(), time.Now(), time.Now(),
+			invitationID, uuid.New(), "test@example.com", token, "user", "pending", time.Now(), time.Now(), time.Now(),
 		)
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "invitations" WHERE token = $1`)).
 			WithArgs(token, 1). // Limit 1
 			WillReturnRows(rows)
 
-		// Observed behavior: GORM queries Users (Invitor) then Organizations.
+		// Observed behavior: GORM queries Users (Invitor).
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1`)).
-			WillReturnRows(sqlmock.NewRows([]string{"id"}))
-
-		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE "organizations"."id" = $1`)).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
 		inv, err := repo.GetByToken(context.Background(), token)
@@ -125,7 +120,6 @@ func TestInvitationRepository_Update(t *testing.T) {
 		mock.ExpectBegin()
 		mock.ExpectExec(regexp.QuoteMeta(`UPDATE "invitations"`)).
 			WithArgs(
-				sqlmock.AnyArg(), // OrganizationID
 				sqlmock.AnyArg(), // InvitorID
 				sqlmock.AnyArg(), // Email
 				invitation.Token,

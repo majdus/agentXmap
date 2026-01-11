@@ -54,7 +54,6 @@ func InitDB(cfg config.Config) (*gorm.DB, error) {
 // This is useful for dev environments or testing.
 func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
-		&domain.Organization{},
 		&domain.User{},
 		&domain.Agent{},
 		&domain.AgentVersion{},

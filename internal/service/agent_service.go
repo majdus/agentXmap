@@ -12,11 +12,11 @@ import (
 
 // AgentService defines the interface for agent management.
 type AgentService interface {
-	CreateAgent(ctx context.Context, orgID, userID uuid.UUID, name string, config json.RawMessage) (*domain.Agent, error)
+	CreateAgent(ctx context.Context, userID uuid.UUID, name string, config json.RawMessage) (*domain.Agent, error)
 	GetAgent(ctx context.Context, id uuid.UUID) (*domain.Agent, error)
-	ListAgents(ctx context.Context, orgID uuid.UUID) ([]domain.Agent, error)
-	ListAgentsByStatus(ctx context.Context, orgID uuid.UUID, status domain.AgentStatus) ([]domain.Agent, error)
-	GetActiveMonthlyCost(ctx context.Context, orgID uuid.UUID) (float64, error)
+	ListAgents(ctx context.Context) ([]domain.Agent, error)
+	ListAgentsByStatus(ctx context.Context, status domain.AgentStatus) ([]domain.Agent, error)
+	GetActiveMonthlyCost(ctx context.Context) (float64, error)
 	ListAgentResources(ctx context.Context, agentID uuid.UUID) ([]domain.Resource, error)
 	ListAssignedUsers(ctx context.Context, agentID uuid.UUID) ([]domain.User, error)
 	ListAssignedAgents(ctx context.Context, userID uuid.UUID) ([]domain.Agent, error)
@@ -38,18 +38,17 @@ func NewAgentService(agentRepo domain.AgentRepository) *DefaultAgentService {
 	}
 }
 
-func (s *DefaultAgentService) CreateAgent(ctx context.Context, orgID, userID uuid.UUID, name string, config json.RawMessage) (*domain.Agent, error) {
+func (s *DefaultAgentService) CreateAgent(ctx context.Context, userID uuid.UUID, name string, config json.RawMessage) (*domain.Agent, error) {
 	if name == "" {
 		return nil, errors.New("agent name is required")
 	}
 
 	agent := &domain.Agent{
-		OrganizationID: orgID,
-		Name:           name,
-		Status:         domain.AgentStatusActive,
-		Configuration:  config,
-		CreatedBy:      &userID,
-		UpdatedBy:      &userID,
+		Name:          name,
+		Status:        domain.AgentStatusActive,
+		Configuration: config,
+		CreatedBy:     &userID,
+		UpdatedBy:     &userID,
 	}
 
 	if err := s.agentRepo.Create(ctx, agent); err != nil {
@@ -84,16 +83,16 @@ func (s *DefaultAgentService) GetAgent(ctx context.Context, id uuid.UUID) (*doma
 	return agent, nil
 }
 
-func (s *DefaultAgentService) ListAgents(ctx context.Context, orgID uuid.UUID) ([]domain.Agent, error) {
-	return s.agentRepo.ListByOrg(ctx, orgID)
+func (s *DefaultAgentService) ListAgents(ctx context.Context) ([]domain.Agent, error) {
+	return s.agentRepo.List(ctx)
 }
 
-func (s *DefaultAgentService) ListAgentsByStatus(ctx context.Context, orgID uuid.UUID, status domain.AgentStatus) ([]domain.Agent, error) {
-	return s.agentRepo.ListByStatus(ctx, orgID, status)
+func (s *DefaultAgentService) ListAgentsByStatus(ctx context.Context, status domain.AgentStatus) ([]domain.Agent, error) {
+	return s.agentRepo.ListByStatus(ctx, status)
 }
 
-func (s *DefaultAgentService) GetActiveMonthlyCost(ctx context.Context, orgID uuid.UUID) (float64, error) {
-	agents, err := s.agentRepo.ListByStatus(ctx, orgID, domain.AgentStatusActive)
+func (s *DefaultAgentService) GetActiveMonthlyCost(ctx context.Context) (float64, error) {
+	agents, err := s.agentRepo.ListByStatus(ctx, domain.AgentStatusActive)
 	if err != nil {
 		return 0, err
 	}
