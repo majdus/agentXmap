@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"agentXmap/internal/handler"
 	"agentXmap/internal/repository"
 	"agentXmap/internal/service"
 	"agentXmap/pkg/config"
@@ -79,17 +80,18 @@ func main() {
 	r.Use(gin.Recovery())
 	// TODO: Add custom logger middleware
 
-	// 7. Routes
-	api := r.Group("/api/v1")
-	{
-		api.GET("/health", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"status":    "ok",
-				"version":   cfg.App.Version,
-				"timestamp": time.Now().Unix(),
-			})
+	// 7. Handlers & Routes
+	authHandler := handler.NewAuthHandler(identityService)
+	handler.RegisterRoutes(r, authHandler)
+
+	// Add Health Check (Keep simple health check here or move to a SystemHandler)
+	r.GET("/api/v1/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "ok",
+			"version":   cfg.App.Version,
+			"timestamp": time.Now().Unix(),
 		})
-	}
+	})
 
 	// 8. Start Server
 	srv := &http.Server{

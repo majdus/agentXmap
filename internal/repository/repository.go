@@ -12,6 +12,12 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+// GetPostgresDialector returns a GORM dialector for a given DSN.
+// This is useful for testing to connect to dynamic container addresses.
+func GetPostgresDialector(dsn string) gorm.Dialector {
+	return postgres.Open(dsn)
+}
+
 // InitDB initializes the database connection using GORM.
 func InitDB(cfg config.Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=UTC",
