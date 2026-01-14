@@ -77,6 +77,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&domain.AgentResourceAccess{},
 		&domain.Certification{},
 		&domain.AgentCertification{},
+		&domain.LLMModelCertification{},
 		&domain.SystemAuditLog{},
 		// &domain.AgentExecution{}, // Partitioned table often skipped in auto-migrate or handled carefully
 	)

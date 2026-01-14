@@ -20,15 +20,22 @@ func setupRouter() *gin.Engine {
 	db := GetTestDB()
 	userRepo := repository.NewUserRepository(db)
 	invitationRepo := repository.NewInvitationRepository(db)
+	agentRepo := repository.NewAgentRepository(db)
+	llmRepo := repository.NewLLMRepository(db)
+
 	identityService := service.NewIdentityService(userRepo, invitationRepo)
+	agentService := service.NewAgentService(agentRepo)
+	llmService := service.NewLLMService(llmRepo)
+
 	authHandler := handler.NewAuthHandler(identityService)
+	agentHandler := handler.NewAgentHandler(agentService, llmService)
 
 	// Setup Gin
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	handler.RegisterRoutes(r, authHandler)
+	handler.RegisterRoutes(r, authHandler, agentHandler)
 	return r
 }
 

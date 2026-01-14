@@ -23,25 +23,37 @@ func NewAuthHandler(identityService service.IdentityService) *AuthHandler {
 
 // InviteUserRequest DTO
 type InviteUserRequest struct {
-	Email string          `json:"email" binding:"required,email"`
-	Role  domain.UserRole `json:"role" binding:"required"`
+	Email string          `json:"email" binding:"required,email" example:"user@example.com"`
+	Role  domain.UserRole `json:"role" binding:"required" example:"user"`
 }
 
 // AcceptInvitationRequest DTO
 type AcceptInvitationRequest struct {
-	Token     string `json:"token" binding:"required"`
-	Password  string `json:"password" binding:"required,min=8"`
-	FirstName string `json:"first_name" binding:"required"`
-	LastName  string `json:"last_name" binding:"required"`
+	Token     string `json:"token" binding:"required" example:"abc-123-token"`
+	Password  string `json:"password" binding:"required,min=8" example:"securepassword123"`
+	FirstName string `json:"first_name" binding:"required" example:"John"`
+	LastName  string `json:"last_name" binding:"required" example:"Doe"`
 }
 
 // LoginRequest DTO
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
+	Email    string `json:"email" binding:"required,email" example:"admin@example.com"`
+	Password string `json:"password" binding:"required" example:"password123"`
 }
 
-// InviteUser handler (Admin only)
+// InviteUser godoc
+// @Summary      Invite a new user
+// @Description  Create a new invitation for a user with a specific role. Admin only.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        X-Admin-ID  header    string  true  "Admin User ID"
+// @Param        request     body      InviteUserRequest  true  "Invitation details"
+// @Success      201  {object}  Response{data=[]domain.Invitation}
+// @Failure      400  {object}  Response
+// @Failure      401  {object}  Response
+// @Failure      500  {object}  Response
+// @Router       /auth/invite [post]
 func (h *AuthHandler) InviteUser(c *gin.Context) {
 	// TODO: Get Admin ID from context (Middleware should set this)
 	// For now, we assume a header "X-User-ID" exists or we mock it for the test
@@ -75,7 +87,16 @@ func (h *AuthHandler) InviteUser(c *gin.Context) {
 	RespondCreated(c, invitations)
 }
 
-// AcceptInvitation handler
+// AcceptInvitation godoc
+// @Summary      Accept an invitation
+// @Description  Complete user registration by providing a password and personal details using the invitation token.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      AcceptInvitationRequest  true  "Acceptance details"
+// @Success      200  {object}  Response{data=object{id=string,email=string}}
+// @Failure      400  {object}  Response
+// @Router       /auth/accept-invitation [post]
 func (h *AuthHandler) AcceptInvitation(c *gin.Context) {
 	var req AcceptInvitationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -96,7 +117,17 @@ func (h *AuthHandler) AcceptInvitation(c *gin.Context) {
 	})
 }
 
-// Login handler
+// Login godoc
+// @Summary      User login
+// @Description  Authenticate user and return a mock JWT token.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      LoginRequest  true  "Login credentials"
+// @Success      200  {object}  Response{data=object{token=string,user=domain.User}}
+// @Failure      400  {object}  Response
+// @Failure      401  {object}  Response
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

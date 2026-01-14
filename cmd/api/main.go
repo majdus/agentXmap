@@ -53,7 +53,12 @@ func main() {
 	// 4. Init Repositories & Services
 	userRepo := repository.NewUserRepository(db)
 	invitationRepo := repository.NewInvitationRepository(db)
+	agentRepo := repository.NewAgentRepository(db)
+	llmRepo := repository.NewLLMRepository(db)
+
 	identityService := service.NewIdentityService(userRepo, invitationRepo)
+	agentService := service.NewAgentService(agentRepo)
+	llmService := service.NewLLMService(llmRepo)
 
 	// 5. Initial Admin Creation
 	if cfg.InitialAdmin.Email != "" && cfg.InitialAdmin.Password != "" {
@@ -82,7 +87,8 @@ func main() {
 
 	// 7. Handlers & Routes
 	authHandler := handler.NewAuthHandler(identityService)
-	handler.RegisterRoutes(r, authHandler)
+	agentHandler := handler.NewAgentHandler(agentService, llmService)
+	handler.RegisterRoutes(r, authHandler, agentHandler)
 
 	// Add Health Check (Keep simple health check here or move to a SystemHandler)
 	r.GET("/api/v1/health", func(c *gin.Context) {
